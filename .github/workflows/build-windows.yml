@@ -1,0 +1,158 @@
+name: Hello Windows Runner
+
+on:
+  push:
+    branches: [ main ]
+  pull_request:
+    branches: [ main ]
+  workflow_dispatch:
+
+jobs:
+  hello-windows:
+    runs-on: windows-latest
+    
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+      
+      - name: Setup Visual Studio Build Tools
+        uses: microsoft/setup-msbuild@v2
+        with:
+          vs-version: '[17.0,18.0)'
+      
+      - name: Setup depot_tools
+        run: |
+          Write-Host "Setting up Chromium depot_tools..." -ForegroundColor Cyan
+          
+          # Clone depot_tools
+          git clone https://chromium.googlesource.com/chromium/tools/depot_tools.git C:\depot_tools
+          
+          # Add to PATH for this session
+          $env:PATH = "C:\depot_tools;$env:PATH"
+          
+          # Add to PATH for subsequent steps
+          echo "C:\depot_tools" | Out-File -FilePath $env:GITHUB_PATH -Encoding utf8 -Append
+          
+          # Disable auto-update (optional, for consistent builds)
+          $env:DEPOT_TOOLS_UPDATE = "0"
+          echo "DEPOT_TOOLS_UPDATE=0" | Out-File -FilePath $env:GITHUB_ENV -Encoding utf8 -Append
+          
+          Write-Host "depot_tools installed successfully" -ForegroundColor Green
+        shell: pwsh
+      
+      - name: Verify depot_tools
+        run: |
+          Write-Host "Verifying depot_tools installation..." -ForegroundColor Cyan
+          
+          # Check if gclient is available
+          $gclient = Get-Command gclient -ErrorAction SilentlyContinue
+          if ($gclient) {
+            Write-Host "✓ gclient found at: $($gclient.Source)" -ForegroundColor Green
+            gclient --version
+          } else {
+            Write-Host "✗ gclient not found in PATH" -ForegroundColor Red
+            exit 1
+          }
+          
+          # Check if gn is available
+          $gn = Get-Command gn -ErrorAction SilentlyContinue
+          if ($gn) {
+            Write-Host "✓ gn found at: $($gn.Source)" -ForegroundColor Green
+            gn --version
+          } else {
+            Write-Host "✗ gn not found in PATH" -ForegroundColor Yellow
+          }
+          
+          # Check if ninja is available
+          $ninja = Get-Command ninja -ErrorAction SilentlyContinue
+          if ($ninja) {
+            Write-Host "✓ ninja found at: $($ninja.Source)" -ForegroundColor Green
+            ninja --version
+          } else {
+            Write-Host "✗ ninja not found in PATH" -ForegroundColor Yellow
+          }
+          
+          Write-Host "`ndepot_tools verification complete" -ForegroundColor Cyan
+        shell: pwsh
+      
+      - name: Display Windows version
+        run: |
+          Write-Host "Hello from Windows GitHub Runner!" -ForegroundColor Green
+          Write-Host ""
+          Write-Host "System Information:" -ForegroundColor Cyan
+          systeminfo | findstr /B /C:"OS Name" /C:"OS Version"
+      
+      - name: Display PowerShell version
+        run: |
+          Write-Host "PowerShell Version:" -ForegroundColor Cyan
+          $PSVersionTable.PSVersion
+      
+      - name: Display environment
+        run: |
+          Write-Host "Environment Variables:" -ForegroundColor Cyan
+          Write-Host "RUNNER_OS: $env:RUNNER_OS"
+          Write-Host "RUNNER_ARCH: $env:RUNNER_ARCH"
+          Write-Host "RUNNER_NAME: $env:RUNNER_NAME"
+          Write-Host "Working Directory: $(Get-Location)"
+      
+      - name: Verify Visual Studio Build Tools
+        run: |
+          Write-Host "Visual Studio Build Tools Information:" -ForegroundColor Cyan
+          Write-Host ""
+          
+          # Find MSBuild
+          $msbuild = Get-Command msbuild -ErrorAction SilentlyContinue
+          if ($msbuild) {
+            Write-Host "MSBuild Location: $($msbuild.Source)" -ForegroundColor Green
+            & msbuild -version
+          } else {
+            Write-Host "MSBuild not found in PATH" -ForegroundColor Red
+          }
+          
+          Write-Host ""
+          
+          # Find cl.exe (MSVC compiler)
+          $cl = Get-Command cl -ErrorAction SilentlyContinue
+          if ($cl) {
+            Write-Host "MSVC Compiler Location: $($cl.Source)" -ForegroundColor Green
+            & cl 2>&1 | Select-String "Microsoft.*C/C\+\+"
+          } else {
+            Write-Host "cl.exe not found in PATH" -ForegroundColor Yellow
+            Write-Host "Searching for Visual Studio installations..." -ForegroundColor Cyan
+            
+            # Use vswhere to find Visual Studio
+            $vswhere = "${env:ProgramFiles(x86)}\Microsoft Visual Studio\Installer\vswhere.exe"
+            if (Test-Path $vswhere) {
+              Write-Host "Found vswhere at: $vswhere" -ForegroundColor Green
+              $vsPath = & $vswhere -latest -property installationPath
+              Write-Host "Visual Studio Installation Path: $vsPath" -ForegroundColor Green
+              
+              # Find MSVC version
+              $msvcPath = Join-Path $vsPath "VC\Tools\MSVC"
+              if (Test-Path $msvcPath) {
+                $msvcVersions = Get-ChildItem $msvcPath -Directory | Sort-Object Name -Descending
+                if ($msvcVersions) {
+                  Write-Host "Available MSVC versions:" -ForegroundColor Cyan
+                  foreach ($ver in $msvcVersions) {
+                    Write-Host "  - $($ver.Name)" -ForegroundColor Yellow
+                  }
+                }
+              }
+            }
+          }
+      
+      - name: List directory contents
+        run: |
+          Write-Host "Repository Contents:" -ForegroundColor Cyan
+          Get-ChildItem -Name
+      
+      - name: Simple calculation
+        run: |
+          Write-Host "Simple PowerShell Calculation:" -ForegroundColor Cyan
+          $result = 42 * 2
+          Write-Host "42 * 2 = $result" -ForegroundColor Yellow
+      
+      - name: Success message
+        run: |
+          Write-Host ""
+          Write-Host "✓ Windows GitHub Runner workflow completed successfully!" -ForegroundColor Green

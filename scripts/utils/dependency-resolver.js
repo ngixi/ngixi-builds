@@ -5,10 +5,11 @@ const log = scopedLogger('dependency-resolver');
 /**
  * Resolves the build order for dependencies using topological sort.
  * Detects circular dependencies and throws an error if found.
+ * Filters out skipped dependencies and validates that non-skipped deps don't depend on skipped ones.
  * 
  * @param {Object} config - Build configuration object
  * @returns {string[]} Array of dependency keys in build order (dependencies before dependents)
- * @throws {Error} If circular dependencies are detected
+ * @throws {Error} If circular dependencies are detected or if non-skipped deps depend on skipped ones
  */
 export function resolveBuildOrder(config) {
   if (!config || !config.deps) {
@@ -16,7 +17,54 @@ export function resolveBuildOrder(config) {
   }
 
   const deps = config.deps;
-  const depNames = Object.keys(deps);
+  const allDepNames = Object.keys(deps);
+  
+  // Separate skipped and non-skipped dependencies
+  const skippedDeps = new Set();
+  const activeDeps = [];
+  
+  for (const depName of allDepNames) {
+    if (deps[depName].skip === true) {
+      skippedDeps.add(depName);
+      log.info({ depName }, 'dependency marked as skipped');
+    } else {
+      activeDeps.push(depName);
+    }
+  }
+  
+  // Validate that non-skipped deps don't depend on skipped ones
+  const invalidDeps = [];
+  for (const depName of activeDeps) {
+    const dependencies = deps[depName].deps || [];
+    const skippedDependencies = dependencies.filter(dep => skippedDeps.has(dep));
+    
+    if (skippedDependencies.length > 0) {
+      invalidDeps.push({
+        dep: depName,
+        dependsOn: skippedDependencies
+      });
+    }
+  }
+  
+  if (invalidDeps.length > 0) {
+    const errorMsg = invalidDeps.map(({ dep, dependsOn }) =>
+      `  - "${dep}" depends on skipped: [${dependsOn.join(', ')}]`
+    ).join('\n');
+    
+    log.error({ invalidDeps }, 'non-skipped dependencies depend on skipped dependencies');
+    
+    throw new Error(
+      `Build configuration error: Non-skipped dependencies cannot depend on skipped dependencies.\n` +
+      `\nViolations:\n${errorMsg}\n\n` +
+      `Please either:\n` +
+      `  1. Mark the dependent as skip: true\n` +
+      `  2. Remove the skipped dependency from its deps array\n` +
+      `  3. Remove skip: true from the dependency`
+    );
+  }
+  
+  // Use only active (non-skipped) dependencies for topological sort
+  const depNames = activeDeps;
   
   // Build adjacency list (dep -> what depends on it)
   const graph = {};

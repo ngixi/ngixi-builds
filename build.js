@@ -129,6 +129,11 @@ async function main() {
 			describe: 'Force a clean rebuild by removing and recloning dependencies',
 			default: false
 		})
+		.option('release', {
+			type: 'boolean',
+			describe: 'Copy artifacts to releases folder after building',
+			default: false
+		})
 		.option('toolcheck', {
 			type: 'boolean',
 			describe: 'Only run toolchain validation and exit',
@@ -240,13 +245,14 @@ async function main() {
 		log.info({ name: report.name, version: report.version, path: report.path, installedViaPyenv: report.installedViaPyenv, arch: report.arch }, 'tool availability confirmed');
 	}
 
-	log.info({ mode: argv.mode, configVersion: buildConfig.version }, 'beginning build orchestration');
+	log.info({ mode: argv.mode, configVersion: buildConfig.version, copyToReleases: argv.release }, 'beginning build orchestration');
 
 	// Use the orchestrator to manage the entire build process
 	const buildResults = await orchestrateBuild({
 		config: buildConfig,
 		buildRoot: BUILD_ROOT,
 		force: argv.force,
+		copyToReleases: argv.release,
 	});
 
 	log.info('build pipeline completed successfully');

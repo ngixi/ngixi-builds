@@ -18,15 +18,17 @@ const log = scopedLogger('build-orchestrator');
  * 2. Resolves dependency order (detects circular deps)
  * 3. Prepares Git repositories (clone + checkout)
  * 4. Dynamically imports and runs build workers in order
+ * 5. Optionally copies artifacts to releases folder
  * 
  * @param {Object} options - Orchestration options
  * @param {Object} options.config - Build configuration object
  * @param {string} options.buildRoot - Root directory for build process
  * @param {boolean} [options.force=false] - Force clean rebuild
+ * @param {boolean} [options.copyToReleases=false] - Copy artifacts to releases folder
  * @returns {Promise<Object[]>} Array of build results
  */
 export async function orchestrateBuild(options) {
-  const { config, buildRoot, force = false } = options;
+  const { config, buildRoot, force = false, copyToReleases = false } = options;
 
   if (!config) {
     throw new Error('orchestrateBuild requires a config object');
@@ -72,6 +74,18 @@ export async function orchestrateBuild(options) {
         error: error.message,
       });
       throw error;
+    }
+    
+    // Skip if marked as skip in config
+    if (depConfig.skip === true) {
+      log.info({ depName }, 'dependency is marked as skipped, skipping build');
+      results.push({
+        ok: true,
+        name: depName,
+        skipped: true,
+        reason: 'marked as skip in config',
+      });
+      continue;
     }
 
     try {
@@ -141,8 +155,8 @@ export async function orchestrateBuild(options) {
 
       log.info({ depName, result: buildResult }, 'build completed');
 
-      // Copy artifacts to releases (always, even if build was skipped)
-      if (config.releasesRoot) {
+      // Copy artifacts to releases (only if copyToReleases flag is true)
+      if (copyToReleases && config.releasesRoot) {
         log.info({ depName }, 'copying artifacts to releases');
         
         const releaseResult = await copyToReleases({

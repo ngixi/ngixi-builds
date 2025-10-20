@@ -98,6 +98,7 @@
     },
     "ffmpeg": {
       "name": "ffmpeg",
+      "skip": true,
       "runner": "scripts/build-workers/buildFFmpeg.js",
       "defaultVersion": "n7.1.2",
       "branch": null,
