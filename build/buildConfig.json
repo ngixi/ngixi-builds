@@ -1,0 +1,137 @@
+{
+  "version": "0.0.1",
+  "releasesRoot": "../releases",
+  "deps": {
+    "wasmtime": {
+      "name": "wasmtime",
+      "runner": "scripts/build-workers/buildWasmtime.js",
+      "defaultVersion": "v37.0.2",
+      "branch": null,
+      "git": {
+        "url": "https://github.com/bytecodealliance/wasmtime.git",
+        "shallow": true,
+        "initSubmodules": true
+      },
+      "versionListUrl": "https://api.github.com/repos/bytecodealliance/wasmtime/tags",
+      "deps": [],
+      "outConfig": {
+        "outDir": "{name}/{os}/{platform}/{version}",
+        "clearRelease": false,
+        "include": [
+          {
+            "globs": [
+              {
+                "folder": "include",
+                "pattern": "**/*.*"
+              },
+              {
+                "folder": "lib",
+                "pattern": "**/*.*"
+              }
+            ]
+          }
+        ]
+      }
+    },
+    "ngixi.zigwin32gen": {
+      "name": "ngixi_zigwin32gen",
+      "runner": "scripts/build-workers/buildNgixi_zigwin32gen.js",
+      "defaultVersion": "v1.0.1",
+      "branch": null,
+      "git": {
+        "url": "git@github.com:ngixi/ngixi-zigwin32gen.git",
+        "shallow": true,
+        "initSubmodules": false
+      },
+      "deps": [],
+      "outConfig": {
+        "outDir": "{name}",
+        "clearRelease": false,
+        "include": [
+          {
+            "globs": [
+              {
+                "folder": "/",
+                "pattern": "**/*.*"
+              }
+            ]
+          }
+        ]
+      }
+    },
+    "google/dawn": {
+      "name": "google_dawn",
+      "runner": "scripts/build-workers/buildDawn.js",
+      "defaultVersion": "v20251015.200420",
+      "branch": null,
+      "git": {
+        "url": "git@github.com:google/dawn.git",
+        "shallow": false,
+        "initSubmodules": false
+      },
+      "deps": [],
+      "outConfig": {
+        "outDir": "{name}/{os}/{platform}/{version}",
+        "clearRelease": false,
+        "include": [
+          {
+            "globs": [
+              {
+                "folder": "bin",
+                "moveToRoot": true,
+                "pattern": "**/*.*"
+              },
+              {
+                "folder": "lib",
+                "moveToRoot": true,
+                "pattern": "**/*.*"
+              },
+              {
+                "folder": "include",
+                "pattern": "**/*.*",
+                "moveToRoot": false
+              }
+            ]
+          }
+        ]
+      }
+    },
+    "ffmpeg": {
+      "name": "ffmpeg",
+      "runner": "scripts/build-workers/buildFFmpeg.js",
+      "defaultVersion": "n7.1.2",
+      "branch": null,
+      "git": {
+        "url": "https://git.ffmpeg.org/ffmpeg.git",
+        "shallow": false,
+        "initSubmodules": false
+      },
+      "deps": ["ngixi.zigwin32gen"],
+      "outConfig": {
+        "outDir": "{name}/{os}/{platform}/{version}",
+        "clearRelease": false,
+        "include": [
+          {
+            "globs": [
+              {
+                "folder": "bin",
+                "moveToRoot": true,
+                "pattern": "**/*.*"
+              },
+              {
+                "folder": "lib",
+                "moveToRoot": true,
+                "pattern": "**/*.*"
+              },
+              {
+                "folder": "include",
+                "pattern": "**/*.*",
+                "moveToRoot": false
+              }
+            ]
+          }
+        ]
+      }
+    }
+  }
+}

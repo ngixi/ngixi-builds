@@ -1,0 +1,50 @@
+# Zig
+zig-cache/
+zig-out/
+build/artifacts
+**/.logs/
+# Rust
+target/
+Cargo.lock
+*.pdb
+releases
+
+# WebAssembly
+*.wasm
+*.wat
+.git.temp/
+# Node.js
+node_modules/
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+package-lock.json
+yarn.lock
+
+# IDE / Editor
+.idea/
+*.swp
+*.swo
+*~
+
+# OS
+.DS_Store
+.DS_Store?
+._*
+.Spotlight-V100
+.Trashes
+ehthumbs.db
+Thumbs.db
+
+# Build artifacts
+build/git.temp/
+dist/
+out/
+*.log
+
+# Environment files
+.env
+.env.local
+.env.development.local
+.env.test.local
+.env.production.local

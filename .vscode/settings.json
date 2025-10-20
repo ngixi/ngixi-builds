@@ -1,0 +1,56 @@
+{
+  "files.exclude": {
+    "**/.git": true,
+    "**/.svn": true,
+    "**/.hg": true,
+    "**/.DS_Store": true,
+    "**/Thumbs.db": true,
+    "**/node_modules": true,
+    "**/bin": false,
+    "**/obj": true,
+    "**/.nuget": true,
+    "**/package-lock.json": true,
+    "**/.gitattributes": true
+  },
+  "explorer.compactFolders": false,
+  "explorer.fileNesting.enabled": true,
+  "search.exclude": {
+    "**/node_modules": true,
+    "**/bower_components": true,
+    "**/*.code-search": true
+  },
+  "explorer.fileNesting.patterns": {
+    "*.js": "${capture}.js.map, ${capture}.min.js, ${capture}.d.ts",
+    "*.jsx": "${capture}.js",
+    "tsconfig.json": "tsconfig.*.json",
+    "package.json": "package-lock.json, yarn.lock, pnpm-lock.yaml, bun.lockb, bun.lock, .gitignore, eslint.config.js, tsconfig.json, .prettierrc, .editorconfig, .python-version, agents.md",
+    "*.cs": "${capture}.designer.cs,${capture}.g.cs,${capture}.generated.cs,${capture}.run.json,${capture}.settings.json,${capture}.settings.*.json",
+    "*.csproj": "${capture}.csproj.user",
+    "*.json": "${capture}.Development.json",
+    "*.cshtml": "${capture}.cshtml.cs,${capture}.cshtml.css",
+    "*.razor": "${capture}.razor.cs,${capture}.razor.css",
+    "*.resx": "${capture}.Designer.cs",
+    "*.xaml": "${capture}.xaml.cs",
+    "*.tsx": "${capture}.scss,${capture}.js,${capture}.pixi.ts",
+    "*.ts": "${capture}.scss,${capture}.js,${capture}.pixi.ts"
+  },
+  "clangd.trace": "off",
+  "clangd.arguments": [
+    "--compile-commands-dir=${workspaceFolder}/build",
+    "-I${workspaceFolder}/build/artifacts/wasmtime/include",
+    "-I${workspaceFolder}/build/artifacts/wasmtime/include/wasmtime",
+    "-I${workspaceFolder}/build/artifacts/dawn/include",
+    "-I${workspaceFolder}/build/artifacts/dawn/include/dawn",    
+  ],
+  "logViewer.watch": [
+    {
+      "title": "Build Logs",
+      "pattern": "${workspaceFolder}/build/.logs/*.log",
+      "format": "plaintext"
+    }
+  ],
+  "terminal.integrated.env.windows": {
+    "WASMTIME_CRANELIFT_FLAGS": "use_sse4_1 use_sse4_2 use_popcnt use_lzcnt use_bmi1 use_bmi2 use_fma use_avx use_avx2 use_avx512f use_avx512dq use_avx512vl enable_pinned_reg opt_level=best",
+    "RUST_BACKTRACE": "1"
+  }
+}
