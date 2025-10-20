@@ -1,4 +1,4 @@
-name: Hello Windows Runner
+name: Ngixi Windows Runner
 
 on:
   push:
@@ -8,12 +8,17 @@ on:
   workflow_dispatch:
 
 jobs:
-  hello-windows:
+  ngixi-windows:
     runs-on: windows-latest
     
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4
+      
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 'latest'
       
       - name: Setup Visual Studio Build Tools
         uses: microsoft/setup-msbuild@v2
@@ -146,13 +151,8 @@ jobs:
           Write-Host "Repository Contents:" -ForegroundColor Cyan
           Get-ChildItem -Name
       
-      - name: Simple calculation
-        run: |
-          Write-Host "Simple PowerShell Calculation:" -ForegroundColor Cyan
-          $result = 42 * 2
-          Write-Host "42 * 2 = $result" -ForegroundColor Yellow
+      - name: Install Node.js dependencies
+        run: npm install
       
-      - name: Success message
-        run: |
-          Write-Host ""
-          Write-Host "✓ Windows GitHub Runner workflow completed successfully!" -ForegroundColor Green
+      - name: Run build toolchain check
+        run: node build.js --toolcheck
