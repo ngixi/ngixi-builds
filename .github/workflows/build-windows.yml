@@ -25,6 +25,11 @@ jobs:
         with:
           vs-version: '[17.0,18.0)'
       
+      - name: Setup Zig
+        uses: mlugg/setup-zig@v1
+        with:
+          version: 0.15.1
+      
       - name: Setup depot_tools
         run: |
           Write-Host "Setting up Chromium depot_tools..." -ForegroundColor Cyan
