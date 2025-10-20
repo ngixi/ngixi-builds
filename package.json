@@ -7,9 +7,9 @@
   "type": "module",
   "main": "index.js",
   "scripts": {
-    "toolcheck": "node build/build.js --toolcheck",
-    "build": "node build/build.js --mode debug",
-    "build:force": "node build/build.js --mode debug --force"
+    "toolcheck": "node build.js --toolcheck",
+    "build": "node build.js --mode debug",
+    "build:force": "node build.js --mode debug --force"
   },
   "devDependencies": {
     "@eslint/js": "^9.37.0",

@@ -8,6 +8,7 @@ target/
 Cargo.lock
 *.pdb
 releases
+artifacts
 
 # WebAssembly
 *.wasm
