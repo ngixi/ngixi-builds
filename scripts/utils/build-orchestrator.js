@@ -25,10 +25,11 @@ const log = scopedLogger('build-orchestrator');
  * @param {string} options.buildRoot - Root directory for build process
  * @param {boolean} [options.force=false] - Force clean rebuild
  * @param {boolean} [options.copyToReleases=false] - Copy artifacts to releases folder
+ * @param {string[]|null} [options.only=null] - Build only these specific dependencies (null = all)
  * @returns {Promise<Object[]>} Array of build results
  */
 export async function orchestrateBuild(options) {
-  const { config, buildRoot, force = false, copyToReleases = false } = options;
+  const { config, buildRoot, force = false, copyToReleases = false, only = null } = options;
 
   if (!config) {
     throw new Error('orchestrateBuild requires a config object');
@@ -45,8 +46,22 @@ export async function orchestrateBuild(options) {
   // Step 2: Resolve build order (detects circular dependencies)
   const buildOrder = resolveBuildOrder(config);
   
+  // Step 2.5: Filter by 'only' if specified
+  let filteredBuildOrder = buildOrder;
+  if (only && only.length > 0) {
+    filteredBuildOrder = buildOrder.filter(depName => only.includes(depName));
+    
+    // Warn if any requested dependencies don't exist
+    const notFound = only.filter(depName => !buildOrder.includes(depName));
+    if (notFound.length > 0) {
+      log.warn({ notFound }, 'some requested dependencies were not found in build order');
+    }
+    
+    log.info({ only, filteredBuildOrder }, 'filtering build order by --only flag');
+  }
+  
   log.info(
-    { buildOrder, count: buildOrder.length },
+    { buildOrder: filteredBuildOrder, count: filteredBuildOrder.length },
     'build order resolved'
   );
 
@@ -60,7 +75,7 @@ export async function orchestrateBuild(options) {
   // Step 4: Build each dependency in order
   const results = [];
 
-  for (const depName of buildOrder) {
+  for (const depName of filteredBuildOrder) {
     log.info({ depName }, 'processing dependency');
 
     const depConfig = getDependency(config, depName);

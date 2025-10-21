@@ -3,6 +3,11 @@ name: build-dawn
 
 on:
   workflow_dispatch:
+  schedule:
+    - cron: "0 0 * * 0"
+  push:
+    branches:
+      - main
 
 jobs:
   info:
@@ -18,11 +23,24 @@ jobs:
           echo BUILD_DATE=`date +'%Y-%m-%d'` >> ${GITHUB_OUTPUT}
       
   build:
-    runs-on: windows-2025
     needs: info
     strategy:
       matrix:
-        arch: [x64, arm64]
+        include:
+          - os: windows
+            runner: WIN-BUILD
+            arch: x64
+          - os: windows
+            runner: WIN-BUILD
+            arch: arm64
+          - os: linux
+            runner: ubuntu-24.04
+            arch: x64
+          # macOS disabled for now
+          # - os: macos
+          #   runner: macos-latest
+          #   arch: arm64
+    runs-on: ${{ matrix.runner }}
     env:
       DAWN_COMMIT: ${{ needs.info.outputs.DAWN_COMMIT }}
       BUILD_DATE: ${{ needs.info.outputs.BUILD_DATE }}
@@ -31,16 +49,23 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v4
 
-      - name: Run Build Script
-        id: build
+      - name: Run Build Script (Windows)
+        if: matrix.os == 'windows'
+        id: build-windows
         shell: cmd
         run: call build.cmd ${{ matrix.arch }}
+
+      - name: Run Build Script (Linux)
+        if: matrix.os == 'linux'
+        id: build-linux
+        shell: bash
+        run: ./build.sh ${{ matrix.arch }}
 
       - name: Upload Artifacts
         uses: actions/upload-artifact@v4
         with:
-          name: dawn-${{ matrix.arch }}-${{ needs.info.outputs.BUILD_DATE }}
-          path: dawn-${{ matrix.arch }}-${{ needs.info.outputs.BUILD_DATE }}.zip
+          name: dawn-${{ matrix.os }}-${{ matrix.arch }}-${{ needs.info.outputs.BUILD_DATE }}
+          path: dawn-${{ matrix.os }}-${{ matrix.arch }}-${{ needs.info.outputs.BUILD_DATE }}.zip
           if-no-files-found: error
           compression-level: 0
 

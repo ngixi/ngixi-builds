@@ -139,6 +139,11 @@ async function main() {
 			describe: 'Only run toolchain validation and exit',
 			default: false
 		})
+		.option('only', {
+			type: 'array',
+			describe: 'Build only specific dependencies (e.g., --only wasmtime --only google/dawn)',
+			default: []
+		})
 		.help()
 		.parse();
 
@@ -253,6 +258,7 @@ async function main() {
 		buildRoot: BUILD_ROOT,
 		force: argv.force,
 		copyToReleases: argv.release,
+		only: argv.only.length > 0 ? argv.only : null,
 	});
 
 	log.info('build pipeline completed successfully');
