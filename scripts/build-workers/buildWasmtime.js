@@ -123,15 +123,18 @@ function buildWasmtimeRustCAPI(cwd) {
   buildArgs.push("-j", "16");
   log.info("using 16 parallel jobs for fast builds on high-core-count CPU");
   
-  // On Linux, disable incremental compilation for stability
+  // On Linux, configure for stability
   if (platform() === 'linux') {
-    log.info("configuring for Linux: disabling incremental compilation");
+    log.info("configuring for Linux: disabling incremental compilation, reducing opt-level");
     
     // Disable incremental compilation to avoid corrupted build artifacts
     env.CARGO_INCREMENTAL = '0';
     
-    // Use default system linker without forcing specific linker
-    // Don't set RUSTFLAGS to avoid any potential issues
+    // Reduce optimization level to work around rustc 1.89.0 compiler bugs
+    // This prevents internal compiler errors during monomorphization
+    env.RUSTFLAGS = '-C opt-level=2';
+    
+    log.info({ CARGO_INCREMENTAL: env.CARGO_INCREMENTAL, RUSTFLAGS: env.RUSTFLAGS }, "using custom build flags");
   }
   
   const result = runCargo(buildArgs, { cwd, env, stdio: "inherit" });
