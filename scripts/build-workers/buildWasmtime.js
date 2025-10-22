@@ -97,7 +97,27 @@ export async function build(options) {
 
 function buildWasmtimeRustCAPI(cwd) {
   log.info("building Rust C API crate (cargo build --release -p wasmtime-c-api)");
-  const result = runCargo(["build", "--release", "-p", "wasmtime-c-api"], { cwd, stdio: "inherit" });
+  
+  // Set up environment for Cargo
+  const env = { ...process.env };
+  
+  // On Linux, explicitly avoid lld linker to prevent symbol resolution issues
+  // Try gold linker first, fall back to default ld if gold is not available
+  if (platform() === 'linux') {
+    // Check if gold linker is available
+    const goldCheck = runCommand('which', ['ld.gold'], { stdio: 'pipe' });
+    
+    if (goldCheck.ok) {
+      log.info("using gold linker on Linux for better compatibility");
+      env.RUSTFLAGS = '-C link-arg=-fuse-ld=gold';
+    } else {
+      // Use default system linker (ld)
+      log.info("gold linker not found, using default system linker");
+      // Don't set any linker flags, let Cargo use the default
+    }
+  }
+  
+  const result = runCargo(["build", "--release", "-p", "wasmtime-c-api"], { cwd, env, stdio: "inherit" });
   if (!result.ok) fail("Rust C API build", result);
 }
 
