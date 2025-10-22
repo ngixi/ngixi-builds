@@ -1,5 +1,6 @@
 import path from 'node:path';
 import { fileURLToPath, pathToFileURL } from 'node:url';
+import { platform } from 'node:os';
 
 import { scopedLogger } from '../logging.js';
 import { validateBuildConfig, getDependency } from './config-validator.js';
@@ -10,6 +11,24 @@ import { copyToReleases, listReleasedFiles } from './release-manager.js';
 import { loadTools } from '../../tools/tool-loader.js';
 
 const log = scopedLogger('build-orchestrator');
+
+/**
+ * Map Node.js platform() to standard OS names
+ * @returns {string} OS name (win, linux, darwin)
+ */
+function getOSName() {
+  const platformName = platform();
+  const osMap = {
+    'win32': 'win',
+    'linux': 'linux',
+    'darwin': 'darwin',
+    'freebsd': 'freebsd',
+    'openbsd': 'openbsd',
+    'sunos': 'sunos',
+    'aix': 'aix',
+  };
+  return osMap[platformName] || platformName;
+}
 
 /**
  * Orchestrates the entire build process.
@@ -102,6 +121,24 @@ export async function orchestrateBuild(options) {
         reason: 'marked as skip in config',
       });
       continue;
+    }
+    
+    // Skip if targetOS is specified and current OS doesn't match
+    if (depConfig.targetOS && Array.isArray(depConfig.targetOS)) {
+      const currentOS = getOSName();
+      if (!depConfig.targetOS.includes(currentOS)) {
+        log.info(
+          { depName, currentOS, targetOS: depConfig.targetOS }, 
+          'dependency targetOS does not match current OS, skipping build'
+        );
+        results.push({
+          ok: true,
+          name: depName,
+          skipped: true,
+          reason: `targetOS mismatch (current: ${currentOS}, required: ${depConfig.targetOS.join(', ')})`,
+        });
+        continue;
+      }
     }
 
     try {

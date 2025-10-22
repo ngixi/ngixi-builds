@@ -1,5 +1,6 @@
 import fs from "node:fs";
 import path from "node:path";
+import { platform } from "node:os";
 import {
   ensureDirectory,
   runCargo,
@@ -8,6 +9,44 @@ import {
 import { scopedLogger } from "../logging.js";
 
 const log = scopedLogger("wasmtime");
+
+/**
+ * Get platform-specific file extensions for Wasmtime artifacts
+ * @returns {Object} Object with dll, lib, and staticLib extensions
+ */
+function getPlatformExtensions() {
+  const os = platform();
+  
+  if (os === 'win32') {
+    return {
+      dll: '.dll',
+      lib: '.lib',
+      staticLib: '.lib',
+      dllName: 'wasmtime.dll',
+      libName: 'wasmtime.lib',
+      staticLibName: 'wasmtime.lib'
+    };
+  } else if (os === 'darwin') {
+    return {
+      dll: '.dylib',
+      lib: '.dylib',
+      staticLib: '.a',
+      dllName: 'libwasmtime.dylib',
+      libName: 'libwasmtime.dylib',
+      staticLibName: 'libwasmtime.a'
+    };
+  } else {
+    // Linux and others
+    return {
+      dll: '.so',
+      lib: '.so',
+      staticLib: '.a',
+      dllName: 'libwasmtime.so',
+      libName: 'libwasmtime.so',
+      staticLibName: 'libwasmtime.a'
+    };
+  }
+}
 
 /**
  * Build Wasmtime runtime.
@@ -73,25 +112,44 @@ function cleanStaleBuildArtifacts(cwd) {
 }
 
 function verifyRustArtifacts(cwd) {
-  const dll = path.join(cwd, "target", "release", "wasmtime.dll");
-  const lib = path.join(cwd, "target", "release", "wasmtime.lib");
-  if (!fs.existsSync(dll) || !fs.existsSync(lib)) {
-    log.error({ dll, lib }, "missing Rust build artifacts");
-    throw new Error("[wasmtime] missing Rust build artifacts — Cargo did not produce the runtime.");
+  const exts = getPlatformExtensions();
+  const dll = path.join(cwd, "target", "release", exts.dllName);
+  const lib = path.join(cwd, "target", "release", exts.libName);
+  
+  if (!fs.existsSync(dll)) {
+    log.error({ dll, expected: exts.dllName }, "missing Rust shared library artifact");
+    throw new Error(`[wasmtime] missing Rust build artifacts — Cargo did not produce ${exts.dllName}`);
   }
+  
+  // On some platforms, shared lib and import lib might be the same file
+  if (exts.dllName !== exts.libName && !fs.existsSync(lib)) {
+    log.error({ lib, expected: exts.libName }, "missing Rust import library artifact");
+    throw new Error(`[wasmtime] missing Rust build artifacts — Cargo did not produce ${exts.libName}`);
+  }
+  
   log.info({ dll, lib }, "verified Rust artifacts exist");
 }
 
 function configureWasmtimeCAPI(cwd, installPrefix) {
   log.info({ installPrefix }, "configuring C API with CMake (cmake configure)");
+  
+  const os = platform();
   const args = [
     "-S", "crates/c-api", 
     "-B", "target/c-api", 
     `-DCMAKE_INSTALL_PREFIX=${installPrefix}`,
     "-G", "Ninja",  // Use Ninja generator for faster builds
-    "-DCMAKE_C_COMPILER=cl.exe",
-    "-DCMAKE_CXX_COMPILER=cl.exe"
   ];
+  
+  // Add platform-specific compiler settings
+  if (os === 'win32') {
+    args.push("-DCMAKE_C_COMPILER=cl.exe");
+    args.push("-DCMAKE_CXX_COMPILER=cl.exe");
+  } else {
+    // On Unix-like systems, use default compilers (usually gcc/g++ or clang/clang++)
+    // CMake will find them automatically
+  }
+  
   runCMakeOrThrow(
     args,
     cwd,
@@ -118,14 +176,21 @@ function installWasmtimeCAPI(cwd, installPrefix) {
 }
 
 function copyRuntimeArtifacts(cwd, installPrefix) {
-  const srcDll = path.join(cwd, "target", "release", "wasmtime.dll");
-  const srcLib = path.join(cwd, "target", "release", "wasmtime.lib");
+  const exts = getPlatformExtensions();
+  const srcDll = path.join(cwd, "target", "release", exts.dllName);
+  const srcLib = path.join(cwd, "target", "release", exts.libName);
   const destLib = path.join(installPrefix, "lib");
   ensureDirectory(destLib);
 
-  log.info({ destLib }, "copying runtime DLL and LIB to artifacts");
-  fs.copyFileSync(srcDll, path.join(destLib, "wasmtime.dll"));
-  fs.copyFileSync(srcLib, path.join(destLib, "wasmtime.lib"));
+  log.info({ destLib, dllName: exts.dllName, libName: exts.libName }, "copying runtime library artifacts");
+  
+  // Copy shared library
+  fs.copyFileSync(srcDll, path.join(destLib, exts.dllName));
+  
+  // Copy import library if different from shared library
+  if (exts.dllName !== exts.libName && fs.existsSync(srcLib)) {
+    fs.copyFileSync(srcLib, path.join(destLib, exts.libName));
+  }
 }
 
 function runCMakeOrThrow(args, cwd, msg) {
@@ -164,18 +229,25 @@ function checkWasmtimeArtifactsExist(artifactsRoot) {
     path.join(includeDir, "wasm.h"),
   ];
   
-  // Check for key libraries (Windows-specific)
-  const keyLibs = process.platform === "win32" 
-    ? [
-        path.join(libDir, "wasmtime.dll"),
-        path.join(libDir, "wasmtime.lib"),
-      ]
-    : [
-        path.join(libDir, "libwasmtime.so"),
-        path.join(libDir, "libwasmtime.a"),
-      ];
+  // Check for key libraries (platform-specific)
+  const exts = getPlatformExtensions();
+  const keyLibs = [
+    path.join(libDir, exts.dllName),
+  ];
+  
+  // Add import library if it's different from shared library (Windows)
+  if (exts.dllName !== exts.libName) {
+    keyLibs.push(path.join(libDir, exts.libName));
+  }
   
   // All key files must exist
   const allFiles = [...keyHeaders, ...keyLibs];
-  return allFiles.every(file => fs.existsSync(file));
+  const exists = allFiles.every(file => fs.existsSync(file));
+  
+  if (!exists) {
+    const missing = allFiles.filter(file => !fs.existsSync(file));
+    log.debug({ missing }, "some artifacts are missing");
+  }
+  
+  return exists;
 }

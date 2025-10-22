@@ -1,9 +1,102 @@
 import fs from 'node:fs';
 import path from 'node:path';
+import { platform } from 'node:os';
 import { ensureDirectory, runCommand } from '../utils/index.js';
 import { scopedLogger } from '../logging.js';
 
 const log = scopedLogger('dawn');
+
+/**
+ * Get platform-specific configuration for Dawn builds
+ * @returns {Object} Platform-specific settings
+ */
+function getPlatformConfig() {
+  const os = platform();
+  
+  if (os === 'win32') {
+    return {
+      os: 'win',
+      sharedLibExt: '.dll',
+      staticLibExt: '.lib',
+      importLibExt: '.lib',
+      sharedLibName: 'webgpu_dawn.dll',
+      importLibName: 'webgpu_dawn.lib',
+      compiler: {
+        c: 'cl',
+        cxx: 'cl',
+        flags: {
+          c: '/O2 /DNDEBUG',
+          cxx: '/O2 /DNDEBUG',
+        },
+      },
+      backends: {
+        d3d11: true,
+        d3d12: true,
+        metal: false,
+        vulkan: true,
+        desktopGL: true,
+      },
+      // On Windows, DLL is in out/Release, lib is in out/Release/src/dawn/native
+      dllPath: (buildDir) => path.join(buildDir, 'webgpu_dawn.dll'),
+      libPath: (buildDir) => path.join(buildDir, 'src', 'dawn', 'native', 'webgpu_dawn.lib'),
+    };
+  } else if (os === 'darwin') {
+    return {
+      os: 'darwin',
+      sharedLibExt: '.dylib',
+      staticLibExt: '.a',
+      importLibExt: '.dylib',
+      sharedLibName: 'libwebgpu_dawn.dylib',
+      importLibName: 'libwebgpu_dawn.dylib',
+      compiler: {
+        c: 'clang',
+        cxx: 'clang++',
+        flags: {
+          c: '-O2 -DNDEBUG',
+          cxx: '-O2 -DNDEBUG',
+        },
+      },
+      backends: {
+        d3d11: false,
+        d3d12: false,
+        metal: true,
+        vulkan: true,
+        desktopGL: true,
+      },
+      // On macOS, both files are in the same location
+      dllPath: (buildDir) => path.join(buildDir, 'libwebgpu_dawn.dylib'),
+      libPath: (buildDir) => path.join(buildDir, 'libwebgpu_dawn.dylib'),
+    };
+  } else {
+    // Linux and others
+    return {
+      os: 'linux',
+      sharedLibExt: '.so',
+      staticLibExt: '.a',
+      importLibExt: '.so',
+      sharedLibName: 'libwebgpu_dawn.so',
+      importLibName: 'libwebgpu_dawn.so',
+      compiler: {
+        c: 'clang',
+        cxx: 'clang++',
+        flags: {
+          c: '-O2 -DNDEBUG',
+          cxx: '-O2 -DNDEBUG',
+        },
+      },
+      backends: {
+        d3d11: false,
+        d3d12: false,
+        metal: false,
+        vulkan: true,
+        desktopGL: true,
+      },
+      // On Linux, both files are in the same location
+      dllPath: (buildDir) => path.join(buildDir, 'libwebgpu_dawn.so'),
+      libPath: (buildDir) => path.join(buildDir, 'libwebgpu_dawn.so'),
+    };
+  }
+}
 
 /**
  * Build Google Dawn WebGPU implementation.
@@ -246,6 +339,10 @@ function configureDawnCMake(cwd, buildDir, installPrefix) {
 
   ensureDirectory(buildDir);
 
+  // Get platform-specific configuration
+  const platformConfig = getPlatformConfig();
+  const { compiler, backends } = platformConfig;
+
   // Get the actual Python executable path (not the pyenv shim)
   const pythonExecutable = getPythonExecutable();
 
@@ -269,13 +366,15 @@ function configureDawnCMake(cwd, buildDir, installPrefix) {
     '-DDAWN_BUILD_MONOLITHIC_LIBRARY=SHARED',
     '-DBUILD_SHARED_LIBS=OFF',
 
-    // Enable every backend and feature that compiles on Windows
+    // Enable C++ API
     '-DDAWN_ENABLE_CPP_API=ON',
-    '-DDAWN_ENABLE_DESKTOP_GL=ON',
-    '-DDAWN_ENABLE_METAL=OFF', // macOS only
-    '-DDAWN_ENABLE_VULKAN=ON',
-    '-DDAWN_ENABLE_D3D11=ON',
-    '-DDAWN_ENABLE_D3D12=ON',
+
+    // Enable platform-specific backends
+    `-DDAWN_ENABLE_DESKTOP_GL=${backends.desktopGL ? 'ON' : 'OFF'}`,
+    `-DDAWN_ENABLE_METAL=${backends.metal ? 'ON' : 'OFF'}`,
+    `-DDAWN_ENABLE_VULKAN=${backends.vulkan ? 'ON' : 'OFF'}`,
+    `-DDAWN_ENABLE_D3D11=${backends.d3d11 ? 'ON' : 'OFF'}`,
+    `-DDAWN_ENABLE_D3D12=${backends.d3d12 ? 'ON' : 'OFF'}`,
     '-DDAWN_USE_SWIFTSHADER=ON',
 
     // Pull in all of Tint's code generators/readers so shaders compile at runtime
@@ -297,19 +396,24 @@ function configureDawnCMake(cwd, buildDir, installPrefix) {
     '-DTINT_BUILD_TESTS=OFF',
     '-DDAWN_BUILD_TESTS=OFF',
 
-    // Compiler setup
-    '-DCMAKE_C_FLAGS_RELEASE=/O2 /DNDEBUG',
-    '-DCMAKE_CXX_FLAGS_RELEASE=/O2 /DNDEBUG',
-    '-DCMAKE_C_COMPILER=cl',
-    '-DCMAKE_CXX_COMPILER=cl',
+    // Platform-specific compiler setup
+    `-DCMAKE_C_FLAGS_RELEASE=${compiler.flags.c}`,
+    `-DCMAKE_CXX_FLAGS_RELEASE=${compiler.flags.cxx}`,
+    `-DCMAKE_C_COMPILER=${compiler.c}`,
+    `-DCMAKE_CXX_COMPILER=${compiler.cxx}`,
   ];
+  
   // Tell CMake where Python is (CMake can't use pyenv shims)
   if (pythonExecutable) {
     cmakeArgs.push(`-DPython3_EXECUTABLE=${pythonExecutable}`);
     log.info({ pythonExecutable }, 'setting Python3 executable for CMake');
   }
 
-  log.info({ args: cmakeArgs.join(' ') }, 'running CMake configuration');
+  log.info({ 
+    platform: platformConfig.os,
+    backends: Object.entries(backends).filter(([k, v]) => v).map(([k]) => k),
+    compiler: `${compiler.c}/${compiler.cxx}`,
+  }, 'configuring Dawn for platform');
 
   const configResult = runCommand('cmake', cmakeArgs, { cwd, stdio: 'inherit' });
 
@@ -344,7 +448,7 @@ function buildDawnCMake(cwd, buildDir) {
 
 /**
  * Install Dawn artifacts to the artifacts directory.
- * Copies only the essential files: webgpu.h header and webgpu_dawn DLL/lib.
+ * Copies only the essential files: webgpu.h header and webgpu_dawn shared library.
  *
  * @param {string} cwd - Dawn repository path
  * @param {string} buildDir - Build output directory
@@ -355,10 +459,10 @@ function installDawnArtifacts(cwd, buildDir, artifactsRoot) {
 
   ensureDirectory(artifactsRoot);
 
+  const platformConfig = getPlatformConfig();
+
   // Source paths
   const genIncludeDir = path.join(buildDir, 'gen', 'include', 'dawn');
-  const releaseDir = buildDir; // DLL is directly in out\Release
-  const nativeLibDir = path.join(buildDir, 'src', 'dawn', 'native'); // lib is in out\Release\src\dawn\native
 
   // Copy the unified webgpu.h header (generated, contains complete C API)
   const webgpuHeader = path.join(genIncludeDir, 'webgpu.h');
@@ -371,41 +475,49 @@ function installDawnArtifacts(cwd, buildDir, artifactsRoot) {
   fs.copyFileSync(webgpuHeader, destHeader);
   log.info({ source: webgpuHeader, dest: destHeader }, 'copied webgpu.h header');
 
-  // Copy webgpu_dawn.dll (the monolithic shared library)
-  const dllSource = path.join(releaseDir, 'webgpu_dawn.dll');
-  const dllDest = path.join(artifactsRoot, 'webgpu_dawn.dll');
+  // Copy shared library (platform-specific)
+  const dllSource = platformConfig.dllPath(buildDir);
+  const dllDest = path.join(artifactsRoot, platformConfig.sharedLibName);
   
   if (!fs.existsSync(dllSource)) {
-    throw new Error(`webgpu_dawn.dll not found at: ${dllSource}`);
+    throw new Error(`${platformConfig.sharedLibName} not found at: ${dllSource}`);
   }
   
   fs.copyFileSync(dllSource, dllDest);
-  log.info({ source: dllSource, dest: dllDest }, 'copied webgpu_dawn.dll');
+  log.info({ source: dllSource, dest: dllDest }, `copied ${platformConfig.sharedLibName}`);
 
-  // Copy webgpu_dawn.lib (import library for linking)
-  const libSource = path.join(nativeLibDir, 'webgpu_dawn.lib');
-  const libDest = path.join(artifactsRoot, 'webgpu_dawn.lib');
-  
-  if (!fs.existsSync(libSource)) {
-    throw new Error(`webgpu_dawn.lib not found at: ${libSource}`);
+  // Copy import library if it's different from shared library (Windows only)
+  if (platformConfig.sharedLibName !== platformConfig.importLibName) {
+    const libSource = platformConfig.libPath(buildDir);
+    const libDest = path.join(artifactsRoot, platformConfig.importLibName);
+    
+    if (!fs.existsSync(libSource)) {
+      throw new Error(`${platformConfig.importLibName} not found at: ${libSource}`);
+    }
+    
+    fs.copyFileSync(libSource, libDest);
+    log.info({ source: libSource, dest: libDest }, `copied ${platformConfig.importLibName}`);
   }
-  
-  fs.copyFileSync(libSource, libDest);
-  log.info({ source: libSource, dest: libDest }, 'copied webgpu_dawn.lib');
 
   log.info('Dawn artifacts installed successfully');
 }
 
 /**
  * Verify that Dawn artifacts were created successfully.
- * Checks for presence of webgpu.h, webgpu_dawn.dll, and webgpu_dawn.lib.
+ * Checks for presence of webgpu.h and platform-specific shared library.
  *
  * @param {string} artifactsRoot - Artifacts directory
  */
 function verifyDawnArtifacts(artifactsRoot) {
   log.info({ artifactsRoot }, 'verifying Dawn artifacts');
 
-  const requiredFiles = ['webgpu.h', 'webgpu_dawn.dll', 'webgpu_dawn.lib'];
+  const platformConfig = getPlatformConfig();
+  const requiredFiles = ['webgpu.h', platformConfig.sharedLibName];
+  
+  // Add import library if different from shared library (Windows)
+  if (platformConfig.sharedLibName !== platformConfig.importLibName) {
+    requiredFiles.push(platformConfig.importLibName);
+  }
 
   for (const file of requiredFiles) {
     const filePath = path.join(artifactsRoot, file);
@@ -415,7 +527,7 @@ function verifyDawnArtifacts(artifactsRoot) {
     log.debug({ file: filePath }, 'verified artifact exists');
   }
 
-  log.info('Dawn artifacts verified');
+  log.info({ files: requiredFiles }, 'Dawn artifacts verified');
 }
 
 /**
@@ -461,7 +573,13 @@ function fail(label, result) {
  * @returns {boolean} True if artifacts exist and appear complete
  */
 function checkDawnArtifactsExist(artifactsRoot) {
-  const requiredFiles = ['webgpu.h', 'webgpu_dawn.dll', 'webgpu_dawn.lib'];
+  const platformConfig = getPlatformConfig();
+  const requiredFiles = ['webgpu.h', platformConfig.sharedLibName];
+  
+  // Add import library if different from shared library (Windows)
+  if (platformConfig.sharedLibName !== platformConfig.importLibName) {
+    requiredFiles.push(platformConfig.importLibName);
+  }
   
   const exists = requiredFiles.every(file => fs.existsSync(path.join(artifactsRoot, file)));
 
