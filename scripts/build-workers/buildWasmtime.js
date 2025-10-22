@@ -118,17 +118,16 @@ function buildWasmtimeRustCAPI(cwd) {
   // Build arguments
   const buildArgs = ["build", "--release", "-p", "wasmtime-c-api"];
   
-  // Force single-threaded build to prevent ISLE compiler race conditions and double-free bugs
-  // The ISLE code generator in cranelift has known issues with parallel builds
-  buildArgs.push("-j", "1");
-  log.info("using single-threaded build to avoid ISLE compiler race conditions");
+  // Use 16 parallel jobs to take advantage of 32-thread CPU
+  // v38.0.2 is stable enough to handle high parallelism with 32GB RAM
+  buildArgs.push("-j", "16");
+  log.info("using 16 parallel jobs for fast builds on high-core-count CPU");
   
-  // On Linux, use default linker and disable incremental compilation
+  // On Linux, disable incremental compilation for stability
   if (platform() === 'linux') {
-    log.info("configuring for Linux: using default linker, disabling incremental compilation");
+    log.info("configuring for Linux: disabling incremental compilation");
     
     // Disable incremental compilation to avoid corrupted build artifacts
-    // This is critical for ISLE compiler stability
     env.CARGO_INCREMENTAL = '0';
     
     // Use default system linker without forcing specific linker
