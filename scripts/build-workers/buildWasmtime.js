@@ -118,30 +118,23 @@ function buildWasmtimeRustCAPI(cwd) {
   // Build arguments - start with base command
   const buildArgs = ["build", "--release", "-p", "wasmtime-c-api"];
   
-  // Reduce codegen-units to prevent compiler crashes and improve stability
-  // Also reduce optimization level slightly to avoid aggressive optimizations that can cause crashes
-  let rustFlags = '-C codegen-units=1';
-  
-  // On Linux, use system linker without forcing specific linker to avoid crashes
+  // On Linux, configure for stability without overly restricting parallelism
   if (platform() === 'linux') {
-    log.info("using default system linker on Linux for maximum stability");
-    // Don't force any specific linker - let Rust choose the most stable option
-    // The previous linker selection was causing SIGSEGV crashes
+    log.info("configuring build for Linux with balanced stability settings");
     
-    // Add link-arg to increase stack size (helps prevent crashes during linking)
-    rustFlags += ' -C link-arg=-Wl,-z,stack-size=8388608';
+    // Don't force any specific linker - let Rust choose the most stable option
+    // Use default codegen-units (16) to prevent proc macro capacity overflow
+    // Only add stack size increase for linking phase
+    env.RUSTFLAGS = '-C link-arg=-Wl,-z,stack-size=8388608';
+    
+    log.info({ RUSTFLAGS: env.RUSTFLAGS }, "using custom Rust compiler flags");
   }
   
-  // Set RUSTFLAGS if we have any
-  if (rustFlags) {
-    env.RUSTFLAGS = rustFlags;
-    log.info({ rustFlags }, "using custom Rust compiler flags");
-  }
-  
-  // Limit parallel jobs to reduce memory pressure (helps prevent SIGSEGV)
-  // Use 1 job for maximum stability, or 2 if system has enough memory
-  buildArgs.push("-j", "1");
-  log.info("limiting parallel jobs to 1 to prevent memory exhaustion and compiler crashes");
+  // Limit parallel jobs to 2 to balance build speed with memory usage
+  // -j 1 was too restrictive and caused proc macro capacity overflow
+  // -j 2 provides some parallelism while keeping memory usage reasonable
+  buildArgs.push("-j", "2");
+  log.info("limiting parallel jobs to 2 to balance performance and memory usage");
   
   const result = runCargo(buildArgs, { cwd, env, stdio: "inherit" });
   if (!result.ok) fail("Rust C API build", result);
