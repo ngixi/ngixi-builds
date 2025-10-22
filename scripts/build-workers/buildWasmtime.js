@@ -115,28 +115,35 @@ function buildWasmtimeRustCAPI(cwd) {
   // Set up environment for Cargo
   const env = { ...process.env };
   
-  // On Linux, use mold linker if available, or fall back to lld, then default
+  // Build arguments - start with base command
+  const buildArgs = ["build", "--release", "-p", "wasmtime-c-api"];
+  
+  // Reduce codegen-units to prevent compiler crashes and improve stability
+  // Also reduce optimization level slightly to avoid aggressive optimizations that can cause crashes
+  let rustFlags = '-C codegen-units=1';
+  
+  // On Linux, use system linker without forcing specific linker to avoid crashes
   if (platform() === 'linux') {
-    // Try mold first (fastest and most reliable for Rust)
-    const moldCheck = runCommand('which', ['mold'], { stdio: 'pipe' });
-    if (moldCheck.ok) {
-      log.info("using mold linker on Linux for better performance and compatibility");
-      env.RUSTFLAGS = '-C link-arg=-fuse-ld=mold';
-    } else {
-      // Try lld as fallback
-      const lldCheck = runCommand('which', ['ld.lld'], { stdio: 'pipe' });
-      if (lldCheck.ok) {
-        log.info("using lld linker on Linux");
-        env.RUSTFLAGS = '-C link-arg=-fuse-ld=lld';
-      } else {
-        // Use default system linker without gold (gold has known issues with some Rust versions)
-        log.info("using default system linker (neither mold nor lld found)");
-        // Don't set RUSTFLAGS to avoid linker issues
-      }
-    }
+    log.info("using default system linker on Linux for maximum stability");
+    // Don't force any specific linker - let Rust choose the most stable option
+    // The previous linker selection was causing SIGSEGV crashes
+    
+    // Add link-arg to increase stack size (helps prevent crashes during linking)
+    rustFlags += ' -C link-arg=-Wl,-z,stack-size=8388608';
   }
   
-  const result = runCargo(["build", "--release", "-p", "wasmtime-c-api"], { cwd, env, stdio: "inherit" });
+  // Set RUSTFLAGS if we have any
+  if (rustFlags) {
+    env.RUSTFLAGS = rustFlags;
+    log.info({ rustFlags }, "using custom Rust compiler flags");
+  }
+  
+  // Limit parallel jobs to reduce memory pressure (helps prevent SIGSEGV)
+  // Use 1 job for maximum stability, or 2 if system has enough memory
+  buildArgs.push("-j", "1");
+  log.info("limiting parallel jobs to 1 to prevent memory exhaustion and compiler crashes");
+  
+  const result = runCargo(buildArgs, { cwd, env, stdio: "inherit" });
   if (!result.ok) fail("Rust C API build", result);
 }
 
