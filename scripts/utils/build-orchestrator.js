@@ -7,6 +7,7 @@ import { resolveBuildOrder } from './dependency-resolver.js';
 import { prepareRepository } from './repo-manager.js';
 import { ensureDirectory } from './file-system.js';
 import { copyToReleases, listReleasedFiles } from './release-manager.js';
+import { loadTools } from '../../tools/tool-loader.js';
 
 const log = scopedLogger('build-orchestrator');
 
@@ -159,16 +160,30 @@ export async function orchestrateBuild(options) {
       
       ensureDirectory(depArtifactsRoot);
 
+      // Load tools for this build
+      let cleanupTools = () => {};
+      if (depConfig.tools && depConfig.tools.length > 0) {
+        log.info({ depName, toolCount: depConfig.tools.length }, 'loading build-specific tools');
+        const toolsDir = path.join(buildRoot, 'tools');
+        cleanupTools = await loadTools(depConfig.tools, toolsDir);
+      }
+
       // Run the build worker
       log.info({ depName, repoRoot: repoResult.repoRoot }, 'starting build');
       
-      const buildResult = await buildFunction({
-        repoRoot: repoResult.repoRoot,
-        artifactsRoot: depArtifactsRoot,
-        force,
-      });
+      let buildResult;
+      try {
+        buildResult = await buildFunction({
+          repoRoot: repoResult.repoRoot,
+          artifactsRoot: depArtifactsRoot,
+          force,
+        });
 
-      log.info({ depName, result: buildResult }, 'build completed');
+        log.info({ depName, result: buildResult }, 'build completed');
+      } finally {
+        // Always cleanup tools, even if build fails
+        cleanupTools();
+      }
 
       // Copy artifacts to releases (only if copyToReleases flag is true)
       if (copyToReleases && config.releasesRoot) {

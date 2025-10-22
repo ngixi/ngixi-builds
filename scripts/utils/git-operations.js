@@ -47,7 +47,7 @@ export function cloneGitRepository(options) {
   }
 
   log.info({ repoUrl, destination, shallow }, 'cloning git repository');
-  const result = runner('git', args);
+  const result = runner('git', args, { stdio: 'inherit' });
 
   return {
     ...result,
@@ -81,7 +81,7 @@ export function updateGitSubmodules(options) {
   }
 
   log.info({ repoPath, recursive }, 'updating git submodules');
-  return runner('git', args);
+  return runner('git', args, { stdio: 'inherit' });
 }
 
 /**
@@ -119,7 +119,7 @@ export function checkoutGitRef(options) {
       continue;
     }
 
-    const tagFetch = runner('git', ['-C', repoPath, 'fetch', '--depth', '1', 'origin', 'tag', trimmedRef]);
+    const tagFetch = runner('git', ['-C', repoPath, 'fetch', '--depth', '1', 'origin', `refs/tags/${trimmedRef}:refs/tags/${trimmedRef}`], { stdio: 'inherit' });
     if (tagFetch.ok) {
       const tagCheckout = attemptCheckoutVariants(runner, repoPath, trimmedRef, true);
       if (tagCheckout.ok) {
@@ -144,9 +144,9 @@ export function checkoutGitRef(options) {
       });
     }
 
-    const branchFetch = runner('git', ['-C', repoPath, 'fetch', '--depth', '1', 'origin', trimmedRef]);
+    const branchFetch = runner('git', ['-C', repoPath, 'fetch', '--depth', '1', 'origin', trimmedRef], { stdio: 'inherit' });
     if (branchFetch.ok) {
-      const branchCheckout = runner('git', ['-C', repoPath, 'checkout', trimmedRef]);
+      const branchCheckout = runner('git', ['-C', repoPath, 'checkout', trimmedRef], { stdio: 'inherit' });
       if (branchCheckout.ok) {
         return {
           ok: true,
@@ -228,7 +228,7 @@ function attemptCheckoutVariants(runner, repoPath, ref, isTag) {
       args.push('--detach');
     }
     args.push(variant);
-    const result = runner('git', args);
+    const result = runner('git', args, { stdio: 'inherit' });
     if (result.ok) {
       return {
         ok: true,

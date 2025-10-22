@@ -60,7 +60,7 @@ export async function build(options) {
   buildDawnCMake(repoRoot, buildDir);
 
   // Install Dawn artifacts (headers and libraries)
-  installDawnArtifacts(repoRoot, buildDir);
+  installDawnArtifacts(repoRoot, buildDir, artifactsRoot);
 
   // Verify artifacts were created
   verifyDawnArtifacts(artifactsRoot);
@@ -177,11 +177,18 @@ function getPythonExecutable() {
     const python3Path = runCommand('where', ['python3'], { stdio: 'pipe', shell: true });
     if (python3Path.ok && python3Path.stdout.trim()) {
       const lines = python3Path.stdout.trim().split('\n');
-      const firstPath = lines[0].trim();
-      // Skip if it's a pyenv shim
-      if (!firstPath.includes('pyenv') && !firstPath.includes('shims')) {
-        log.debug({ pythonPath: firstPath }, 'found Python via python3');
-        return firstPath;
+      for (const line of lines) {
+        const pythonPath = line.trim();
+        // Skip pyenv shims, depot_tools wrappers (.bat files), and WindowsApps stub
+        if (!pythonPath.includes('pyenv') && 
+            !pythonPath.includes('shims') && 
+            !pythonPath.includes('depot_tools') &&
+            !pythonPath.includes('WindowsApps') &&
+            !pythonPath.toLowerCase().endsWith('.bat') &&
+            pythonPath.toLowerCase().endsWith('.exe')) {
+          log.debug({ pythonPath }, 'found Python via python3');
+          return pythonPath;
+        }
       }
     }
   }
@@ -192,11 +199,32 @@ function getPythonExecutable() {
     const pythonPath = runCommand('where', ['python'], { stdio: 'pipe', shell: true });
     if (pythonPath.ok && pythonPath.stdout.trim()) {
       const lines = pythonPath.stdout.trim().split('\n');
-      const firstPath = lines[0].trim();
-      // Skip if it's a pyenv shim
-      if (!firstPath.includes('pyenv') && !firstPath.includes('shims')) {
-        log.debug({ pythonPath: firstPath }, 'found Python via python');
-        return firstPath;
+      for (const line of lines) {
+        const pythonExe = line.trim();
+        // Skip pyenv shims, depot_tools wrappers (.bat files), and WindowsApps stub
+        if (!pythonExe.includes('pyenv') && 
+            !pythonExe.includes('shims') && 
+            !pythonExe.includes('depot_tools') &&
+            !pythonExe.includes('WindowsApps') &&
+            !pythonExe.toLowerCase().endsWith('.bat') &&
+            pythonExe.toLowerCase().endsWith('.exe')) {
+          log.debug({ pythonPath: pythonExe }, 'found Python via python');
+          return pythonExe;
+        }
+      }
+    }
+  }
+
+  // Try py launcher (Windows Python launcher)
+  const pyCheck = runCommand('py', ['-3', '--version'], { stdio: 'pipe' });
+  if (pyCheck.ok && pyCheck.stdout.includes('Python 3')) {
+    // Get actual executable path from py launcher
+    const pyPathResult = runCommand('py', ['-3', '-c', 'import sys; print(sys.executable)'], { stdio: 'pipe' });
+    if (pyPathResult.ok && pyPathResult.stdout.trim()) {
+      const pythonExe = pyPathResult.stdout.trim();
+      if (pythonExe.toLowerCase().endsWith('.exe')) {
+        log.debug({ pythonPath: pythonExe }, 'found Python via py launcher');
+        return pythonExe;
       }
     }
   }
@@ -250,7 +278,7 @@ function configureDawnCMake(cwd, buildDir, installPrefix) {
     '-DDAWN_ENABLE_D3D12=ON',
     '-DDAWN_USE_SWIFTSHADER=ON',
 
-    // Pull in all of Tint’s code generators/readers so shaders compile at runtime
+    // Pull in all of Tint's code generators/readers so shaders compile at runtime
     '-DTINT_BUILD_SPV_READER=ON',
     '-DTINT_BUILD_SPV_WRITER=ON',
     '-DTINT_BUILD_GLSL_WRITER=ON',
@@ -316,67 +344,75 @@ function buildDawnCMake(cwd, buildDir) {
 
 /**
  * Install Dawn artifacts to the artifacts directory.
- * This includes headers and libraries needed for linking.
+ * Copies only the essential files: webgpu.h header and webgpu_dawn DLL/lib.
  *
  * @param {string} cwd - Dawn repository path
  * @param {string} buildDir - Build output directory
+ * @param {string} artifactsRoot - Destination directory
  */
-function installDawnArtifacts(cwd, buildDir) {
-  log.info('installing Dawn artifacts');
+function installDawnArtifacts(cwd, buildDir, artifactsRoot) {
+  log.info({ artifactsRoot }, 'installing Dawn artifacts');
 
-  const installArgs = ['--install', path.relative(cwd, buildDir), '--config', 'Release'];
+  ensureDirectory(artifactsRoot);
 
-  const installResult = runCommand('cmake', installArgs, { cwd, stdio: 'inherit' });
+  // Source paths
+  const genIncludeDir = path.join(buildDir, 'gen', 'include', 'dawn');
+  const releaseDir = buildDir; // DLL is directly in out\Release
+  const nativeLibDir = path.join(buildDir, 'src', 'dawn', 'native'); // lib is in out\Release\src\dawn\native
 
-  if (!installResult.ok) {
-    fail('CMake install', installResult);
+  // Copy the unified webgpu.h header (generated, contains complete C API)
+  const webgpuHeader = path.join(genIncludeDir, 'webgpu.h');
+  const destHeader = path.join(artifactsRoot, 'webgpu.h');
+  
+  if (!fs.existsSync(webgpuHeader)) {
+    throw new Error(`Generated webgpu.h not found at: ${webgpuHeader}`);
   }
+  
+  fs.copyFileSync(webgpuHeader, destHeader);
+  log.info({ source: webgpuHeader, dest: destHeader }, 'copied webgpu.h header');
+
+  // Copy webgpu_dawn.dll (the monolithic shared library)
+  const dllSource = path.join(releaseDir, 'webgpu_dawn.dll');
+  const dllDest = path.join(artifactsRoot, 'webgpu_dawn.dll');
+  
+  if (!fs.existsSync(dllSource)) {
+    throw new Error(`webgpu_dawn.dll not found at: ${dllSource}`);
+  }
+  
+  fs.copyFileSync(dllSource, dllDest);
+  log.info({ source: dllSource, dest: dllDest }, 'copied webgpu_dawn.dll');
+
+  // Copy webgpu_dawn.lib (import library for linking)
+  const libSource = path.join(nativeLibDir, 'webgpu_dawn.lib');
+  const libDest = path.join(artifactsRoot, 'webgpu_dawn.lib');
+  
+  if (!fs.existsSync(libSource)) {
+    throw new Error(`webgpu_dawn.lib not found at: ${libSource}`);
+  }
+  
+  fs.copyFileSync(libSource, libDest);
+  log.info({ source: libSource, dest: libDest }, 'copied webgpu_dawn.lib');
 
   log.info('Dawn artifacts installed successfully');
 }
 
 /**
  * Verify that Dawn artifacts were created successfully.
- * Checks for presence of key headers and libraries.
+ * Checks for presence of webgpu.h, webgpu_dawn.dll, and webgpu_dawn.lib.
  *
  * @param {string} artifactsRoot - Artifacts directory
  */
 function verifyDawnArtifacts(artifactsRoot) {
   log.info({ artifactsRoot }, 'verifying Dawn artifacts');
 
-  const includeDir = path.join(artifactsRoot, 'include');
-  const libDir = path.join(artifactsRoot, 'lib');
+  const requiredFiles = ['webgpu.h', 'webgpu_dawn.dll', 'webgpu_dawn.lib'];
 
-  if (!fs.existsSync(includeDir)) {
-    throw new Error(`Dawn include directory not found: ${includeDir}`);
-  }
-
-  if (!fs.existsSync(libDir)) {
-    throw new Error(`Dawn lib directory not found: ${libDir}`);
-  }
-
-  // Check for key Dawn headers
-  const keyHeaders = [path.join(includeDir, 'dawn', 'webgpu.h'), path.join(includeDir, 'dawn', 'dawn_proc.h')];
-
-  for (const header of keyHeaders) {
-    if (!fs.existsSync(header)) {
-      log.warn({ header }, 'expected Dawn header not found');
-    } else {
-      log.debug({ header }, 'verified Dawn header exists');
+  for (const file of requiredFiles) {
+    const filePath = path.join(artifactsRoot, file);
+    if (!fs.existsSync(filePath)) {
+      throw new Error(`Required Dawn artifact not found: ${filePath}`);
     }
-  }
-
-  // Check for libraries (Windows-specific)
-  if (process.platform === 'win32') {
-    const keyLibs = [path.join(libDir, 'webgpu_dawn.lib'), path.join(libDir, 'dawn_proc.lib')];
-
-    for (const lib of keyLibs) {
-      if (!fs.existsSync(lib)) {
-        log.warn({ lib }, 'expected Dawn library not found');
-      } else {
-        log.debug({ lib }, 'verified Dawn library exists');
-      }
-    }
+    log.debug({ file: filePath }, 'verified artifact exists');
   }
 
   log.info('Dawn artifacts verified');
@@ -425,25 +461,13 @@ function fail(label, result) {
  * @returns {boolean} True if artifacts exist and appear complete
  */
 function checkDawnArtifactsExist(artifactsRoot) {
-  const includeDir = path.join(artifactsRoot, 'include');
-  const libDir = path.join(artifactsRoot, 'lib');
-
-  // Check for key headers
-  const keyHeaders = [
-    path.join(includeDir, 'dawn', 'webgpu.h'),
-    path.join(includeDir, 'dawn', 'dawn_proc_table.h'),
-    path.join(includeDir, 'webgpu', 'webgpu.h'),
-  ];
-
-  // Check for libraries (Windows uses .lib, Linux/macOS use .a/.so)
-  const keyLibs = process.platform === 'win32' ? [path.join(libDir, 'webgpu_dawn.lib')] : [path.join(libDir, 'libwebgpu_dawn.a')];
-
-  // All key files must exist
-  const allFiles = [...keyHeaders, ...keyLibs];
-  const exists = allFiles.every(file => fs.existsSync(file));
+  const requiredFiles = ['webgpu.h', 'webgpu_dawn.dll', 'webgpu_dawn.lib'];
+  
+  const exists = requiredFiles.every(file => fs.existsSync(path.join(artifactsRoot, file)));
 
   if (!exists) {
-    log.debug({ artifactsRoot, missingFiles: allFiles.filter(f => !fs.existsSync(f)) }, 'Dawn artifacts incomplete or missing');
+    const missingFiles = requiredFiles.filter(f => !fs.existsSync(path.join(artifactsRoot, f)));
+    log.debug({ artifactsRoot, missingFiles }, 'Dawn artifacts incomplete or missing');
   }
 
   return exists;

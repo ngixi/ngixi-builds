@@ -74,12 +74,6 @@ const TOOLCHAIN_REQUIREMENTS = [
 		}
 	},
 	{
-		name: 'depot_tools',
-		program: 'gclient',
-		hint: 'Install depot_tools and add to PATH. See https://commondatastorage.googleapis.com/chrome-infra-docs/flat/depot_tools/docs/html/depot_tools_tutorial.html',
-		required: true
-	},
-	{
 		name: 'Python 3',
 		program: 'python3',
 		minimumVersion: '3.11.0',

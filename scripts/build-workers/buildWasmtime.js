@@ -88,7 +88,9 @@ function configureWasmtimeCAPI(cwd, installPrefix) {
     "-S", "crates/c-api", 
     "-B", "target/c-api", 
     `-DCMAKE_INSTALL_PREFIX=${installPrefix}`,
-    "-G", "Ninja"  // Use Ninja generator for faster builds
+    "-G", "Ninja",  // Use Ninja generator for faster builds
+    "-DCMAKE_C_COMPILER=cl.exe",
+    "-DCMAKE_CXX_COMPILER=cl.exe"
   ];
   runCMakeOrThrow(
     args,

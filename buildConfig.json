@@ -14,6 +14,12 @@
       },
       "versionListUrl": "https://api.github.com/repos/bytecodealliance/wasmtime/tags",
       "deps": [],
+      "tools": [
+        { "name": "cargo", "toolFile": "cargo.js" },
+        { "name": "cmake", "toolFile": "cmake.js" },
+        { "name": "ninja", "toolFile": "ninja.js" },
+        { "name": "msvc", "toolFile": "msvc.js" }
+      ],
       "outConfig": {
         "outDir": "{name}/{os}/{platform}/{version}",
         "clearRelease": false,
@@ -39,7 +45,7 @@
       "defaultVersion": "v1.0.1",
       "branch": null,
       "git": {
-        "url": "git@github.com:ngixi/ngixi-zigwin32gen.git",
+        "url": "https://github.com/ngixi/ngixi-zigwin32gen.git",
         "shallow": true,
         "initSubmodules": false
       },
@@ -65,11 +71,18 @@
       "defaultVersion": "v20251015.200420",
       "branch": null,
       "git": {
-        "url": "git@github.com:google/dawn.git",
+        "url": "https://github.com/google/dawn.git",
         "shallow": false,
         "initSubmodules": false
       },
       "deps": [],
+      "tools": [
+        { "name": "depot_tools", "toolFile": "depot-tools.js" },
+        { "name": "cmake", "toolFile": "cmake.js" },
+        { "name": "ninja", "toolFile": "ninja.js" },
+        { "name": "python3", "toolFile": "python3.js" },
+        { "name": "msvc", "toolFile": "msvc.js" }
+      ],
       "outConfig": {
         "outDir": "{name}/{os}/{platform}/{version}",
         "clearRelease": false,
