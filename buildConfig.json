@@ -5,7 +5,7 @@
     "wasmtime": {
       "name": "wasmtime",
       "runner": "scripts/build-workers/buildWasmtime.js",
-      "defaultVersion": "v36.0.1",
+      "defaultVersion": "v38.0.2",
       "branch": null,
       "git": {
         "url": "https://github.com/bytecodealliance/wasmtime.git",

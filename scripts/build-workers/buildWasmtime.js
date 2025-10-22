@@ -115,26 +115,25 @@ function buildWasmtimeRustCAPI(cwd) {
   // Set up environment for Cargo
   const env = { ...process.env };
   
-  // Build arguments - start with base command
+  // Build arguments
   const buildArgs = ["build", "--release", "-p", "wasmtime-c-api"];
   
-  // On Linux, configure for stability without overly restricting parallelism
-  if (platform() === 'linux') {
-    log.info("configuring build for Linux with balanced stability settings");
-    
-    // Don't force any specific linker - let Rust choose the most stable option
-    // Use default codegen-units (16) to prevent proc macro capacity overflow
-    // Only add stack size increase for linking phase
-    env.RUSTFLAGS = '-C link-arg=-Wl,-z,stack-size=8388608';
-    
-    log.info({ RUSTFLAGS: env.RUSTFLAGS }, "using custom Rust compiler flags");
-  }
+  // Force single-threaded build to prevent ISLE compiler race conditions and double-free bugs
+  // The ISLE code generator in cranelift has known issues with parallel builds
+  buildArgs.push("-j", "1");
+  log.info("using single-threaded build to avoid ISLE compiler race conditions");
   
-  // Limit parallel jobs to 2 to balance build speed with memory usage
-  // -j 1 was too restrictive and caused proc macro capacity overflow
-  // -j 2 provides some parallelism while keeping memory usage reasonable
-  buildArgs.push("-j", "2");
-  log.info("limiting parallel jobs to 2 to balance performance and memory usage");
+  // On Linux, use default linker and disable incremental compilation
+  if (platform() === 'linux') {
+    log.info("configuring for Linux: using default linker, disabling incremental compilation");
+    
+    // Disable incremental compilation to avoid corrupted build artifacts
+    // This is critical for ISLE compiler stability
+    env.CARGO_INCREMENTAL = '0';
+    
+    // Use default system linker without forcing specific linker
+    // Don't set RUSTFLAGS to avoid any potential issues
+  }
   
   const result = runCargo(buildArgs, { cwd, env, stdio: "inherit" });
   if (!result.ok) fail("Rust C API build", result);
