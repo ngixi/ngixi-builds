@@ -98,22 +98,41 @@ export async function build(options) {
 function buildWasmtimeRustCAPI(cwd) {
   log.info("building Rust C API crate (cargo build --release -p wasmtime-c-api)");
   
+  // Clean Cargo cache and lock file to prevent dependency version conflicts
+  log.info("cleaning Cargo build cache to prevent symbol conflicts");
+  const cleanResult = runCargo(["clean"], { cwd, stdio: "inherit" });
+  if (!cleanResult.ok) {
+    log.warn("cargo clean failed, continuing anyway");
+  }
+  
+  // Update Cargo.lock to ensure dependency consistency
+  log.info("updating Cargo.lock to resolve dependency conflicts");
+  const updateResult = runCargo(["update"], { cwd, stdio: "inherit" });
+  if (!updateResult.ok) {
+    log.warn("cargo update failed, continuing with existing lock file");
+  }
+  
   // Set up environment for Cargo
   const env = { ...process.env };
   
-  // On Linux, explicitly avoid lld linker to prevent symbol resolution issues
-  // Try gold linker first, fall back to default ld if gold is not available
+  // On Linux, use mold linker if available, or fall back to lld, then default
   if (platform() === 'linux') {
-    // Check if gold linker is available
-    const goldCheck = runCommand('which', ['ld.gold'], { stdio: 'pipe' });
-    
-    if (goldCheck.ok) {
-      log.info("using gold linker on Linux for better compatibility");
-      env.RUSTFLAGS = '-C link-arg=-fuse-ld=gold';
+    // Try mold first (fastest and most reliable for Rust)
+    const moldCheck = runCommand('which', ['mold'], { stdio: 'pipe' });
+    if (moldCheck.ok) {
+      log.info("using mold linker on Linux for better performance and compatibility");
+      env.RUSTFLAGS = '-C link-arg=-fuse-ld=mold';
     } else {
-      // Use default system linker (ld)
-      log.info("gold linker not found, using default system linker");
-      // Don't set any linker flags, let Cargo use the default
+      // Try lld as fallback
+      const lldCheck = runCommand('which', ['ld.lld'], { stdio: 'pipe' });
+      if (lldCheck.ok) {
+        log.info("using lld linker on Linux");
+        env.RUSTFLAGS = '-C link-arg=-fuse-ld=lld';
+      } else {
+        // Use default system linker without gold (gold has known issues with some Rust versions)
+        log.info("using default system linker (neither mold nor lld found)");
+        // Don't set RUSTFLAGS to avoid linker issues
+      }
     }
   }
   
