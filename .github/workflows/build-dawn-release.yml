@@ -1,4 +1,4 @@
-name: Build Dawn
+name: Nightly Build Dawn & Release
 
 on:
   workflow_dispatch:
