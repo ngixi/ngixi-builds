@@ -6,6 +6,8 @@ on:
 jobs:
   build-windows:
     runs-on: WIN-BUILD
+    permissions:
+      contents: write
     env:
       DEPOT_TOOLS_WIN_TOOLCHAIN: 0
 
@@ -59,7 +61,6 @@ jobs:
         run: |
           call "C:\Program Files\Microsoft Visual Studio\2022\Community\VC\Auxiliary\Build\vcvars64.bat"
           cd dawn
-          if exist out\mono-shared rd /s /q out\mono-shared
           cmake -S . -B out\mono-shared -G Ninja ^
             -DCMAKE_BUILD_TYPE=Release ^
             -DCMAKE_C_COMPILER=cl ^
@@ -90,7 +91,6 @@ jobs:
         run: |
           call "C:\Program Files\Microsoft Visual Studio\2022\Community\VC\Auxiliary\Build\vcvars64.bat"
           cd dawn
-          if exist out\mono-static rd /s /q out\mono-static
           cmake -S . -B out\mono-static -G Ninja ^
             -DCMAKE_BUILD_TYPE=Release ^
             -DCMAKE_C_COMPILER=cl ^
