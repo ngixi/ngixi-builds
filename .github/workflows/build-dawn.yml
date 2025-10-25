@@ -37,7 +37,8 @@ jobs:
             -DCMAKE_CXX_COMPILER=cl ^
             -DCMAKE_CXX_FLAGS="/DNOMINMAX /DWIN32_LEAN_AND_MEAN" ^
             -DCMAKE_SYSTEM_VERSION=10.0.26100.0 ^
-            -DDAWN_ENABLE_INSTALL=ON
+            -DDAWN_ENABLE_INSTALL=ON ^
+            -DBUILD_SHARED_LIBS=ON
 
       - name: Build
         shell: cmd
