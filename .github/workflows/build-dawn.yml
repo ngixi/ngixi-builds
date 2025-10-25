@@ -10,10 +10,11 @@ jobs:
     runs-on: WIN-BUILD
     env:
       DEPOT_TOOLS_WIN_TOOLCHAIN: 0
-      DAWN_DIR: dawn
-      BUILD_DIR: out/Release
+      DEPOT_TOOLS_PYTHON3: C:\tools\Python313\python.exe
       PYTHONHOME: C:\tools\Python313
       PYTHONPATH: C:\tools\Python313\Lib
+      DAWN_DIR: dawn
+      BUILD_DIR: out/Release
 
     steps:
       # --- Force correct Python for all following steps ---
@@ -30,6 +31,7 @@ jobs:
           python3 --version
           where python
           where python3
+          Write-Host "DEPOT_TOOLS_PYTHON3=$env:DEPOT_TOOLS_PYTHON3"
 
       # --- Source checkout ---
       - name: Checkout repository
@@ -61,6 +63,9 @@ jobs:
         run: |
           cd $env:DAWN_DIR
           Copy-Item scripts/standalone.gclient .gclient -Force
+          # explicitly tell depot_tools to use the correct python
+          $env:DEPOT_TOOLS_PYTHON3 = "C:\tools\Python313\python.exe"
+          Write-Host "Using depot_tools python: $env:DEPOT_TOOLS_PYTHON3"
           gclient sync
 
       # --- Python deps for generator ---
@@ -91,23 +96,3 @@ jobs:
             -DDAWN_BUILD_TESTS=OFF `
             -DTINT_BUILD_TESTS=OFF `
             -DBUILD_SHARED_LIBS=OFF `
-            -Dprotobuf_BUILD_SHARED_LIBS=OFF `
-            -DDAWN_ENABLE_CPP_API=OFF `
-            -DDAWN_ENABLE_DESKTOP_GL=OFF `
-            -DDAWN_ENABLE_METAL=OFF `
-            -DDAWN_ENABLE_VULKAN=ON `
-            -DDAWN_ENABLE_D3D12=ON
-
-      # --- Build ---
-      - name: Build Dawn libraries
-        shell: powershell
-        run: |
-          cd $env:DAWN_DIR
-          cmake --build $env:BUILD_DIR --parallel
-
-      # --- Install artifacts ---
-      - name: Install Dawn to output directory
-        shell: powershell
-        run: |
-          cd $env:DAWN_DIR
-          cmake --install $env:BUILD_DIR --prefix install/Release
