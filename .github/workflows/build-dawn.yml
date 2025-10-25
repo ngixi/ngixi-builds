@@ -41,6 +41,7 @@ jobs:
       - name: Configure CMake
         run: |
           cd dawn
+          $env:PATH = "${{ github.workspace }}\dawn\out\Release;$env:PATH"
           cmake -S . -B out/Release -DDAWN_FETCH_DEPENDENCIES=ON -DDAWN_ENABLE_INSTALL=ON -DCMAKE_BUILD_TYPE=Release -DBUILD_SHARED_LIBS=ON -DDAWN_BUILD_MONOLITHIC_LIBRARY=OFF -GNinja
 
       - name: Build Dawn
