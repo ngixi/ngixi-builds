@@ -13,13 +13,13 @@ jobs:
       - name: Checkout Dawn
         run: |
           if (-not (Test-Path dawn)) {
-            git clone https://dawn.googlesource.com/dawn
+            git clone https://github.com/google/dawn
           }
 
       - name: Resolve newest upstream tag
         shell: pwsh
         run: |
-          $RepoUrl = 'https://dawn.googlesource.com/dawn'
+          $RepoUrl = 'https://github.com/google/dawn'
           # Normalize URL (remove .git suffix if present)
           $RepoUrl = $RepoUrl -replace '\.git$', ''
           # Get tag list from remote
