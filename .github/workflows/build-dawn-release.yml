@@ -14,20 +14,14 @@ jobs:
       DEPOT_TOOLS_WIN_TOOLCHAIN: 0
     defaults:
       run:
-        working-directory: nightly-dawn-release-build
+        working-directory: dawn-nightly
 
     steps:
-      - name: Create build directory
-        run: |
-          if (-not (Test-Path nightly-dawn-release-build)) {
-            New-Item -ItemType Directory -Path nightly-dawn-release-build
-          }
-        working-directory: .
-
       - name: Checkout ngixi-builds repo
         uses: actions/checkout@v4
         with:
           clean: false
+          path: dawn-nightly/ngixi-builds
 
       - name: Checkout Dawn
         run: |
