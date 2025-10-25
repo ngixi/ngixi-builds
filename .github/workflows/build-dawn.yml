@@ -8,7 +8,6 @@ on:
 jobs:
   build-windows:
     runs-on: WIN-BUILD
-
     env:
       DEPOT_TOOLS_WIN_TOOLCHAIN: 0
 
@@ -26,26 +25,30 @@ jobs:
           cp scripts/standalone.gclient .gclient
           gclient sync
 
-      - name: Configure with CMake (MSVC + install)
+      - name: Configure (MSVC + Ninja + install)
         shell: cmd
         run: |
           call "C:\Program Files\Microsoft Visual Studio\2022\Community\VC\Auxiliary\Build\vcvars64.bat"
           cd dawn
+          if exist out\Release rd /s /q out\Release
           cmake -S . -B out\Release -G Ninja ^
             -DCMAKE_BUILD_TYPE=Release ^
             -DCMAKE_C_COMPILER=cl ^
             -DCMAKE_CXX_COMPILER=cl ^
-            -DCMAKE_CXX_FLAGS="/DNOMINMAX" ^
+            -DCMAKE_CXX_FLAGS="/DNOMINMAX /DWIN32_LEAN_AND_MEAN" ^
+            -DCMAKE_SYSTEM_VERSION=10.0.26100.0 ^
             -DDAWN_ENABLE_INSTALL=ON
 
-      - name: Build with CMake
+      - name: Build
         shell: cmd
         run: |
+          call "C:\Program Files\Microsoft Visual Studio\2022\Community\VC\Auxiliary\Build\vcvars64.bat"
           cd dawn
           cmake --build out\Release --parallel
 
-      - name: Install Dawn artifacts
+      - name: Install
         shell: cmd
         run: |
+          call "C:\Program Files\Microsoft Visual Studio\2022\Community\VC\Auxiliary\Build\vcvars64.bat"
           cd dawn
           cmake --install out\Release --prefix install\Release
