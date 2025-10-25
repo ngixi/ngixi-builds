@@ -134,25 +134,10 @@ jobs:
           Compress-Archive -Path .\install\mono-static -DestinationPath "..\dawn-windows-x64-mono-static-$env:DAWN_TAG.zip" -Force
           Get-FileHash "..\dawn-windows-x64-mono-*.zip" -Algorithm SHA256 |
             ForEach-Object { "$($_.Hash)  $($_.Path)" } | Out-File -Encoding ascii "..\SHA256SUMS"
-
-      - name: Check if release exists
-        id: check_release
-        shell: pwsh
-        run: |
-          $releaseTag = "dawn-$env:DAWN_TAG"
-          try {
-            gh release view $releaseTag --repo ${{ github.repository }} --json id 2>$null | Out-Null
-            Write-Host "Release $releaseTag already exists, skipping"
-            "exists=true" | Out-File -Encoding utf8 -Append $env:GITHUB_OUTPUT
-          } catch {
-            Write-Host "Release $releaseTag does not exist, will create"
-            "exists=false" | Out-File -Encoding utf8 -Append $env:GITHUB_OUTPUT
-          }
-        env:
-          GH_TOKEN: ${{ github.token }}
+          # Also copy DAWN_GIT.txt to parent
+          Copy-Item ..\DAWN_GIT.txt ..\DAWN_GIT.txt -Force
 
       - name: Create Release and upload assets
-        if: steps.check_release.outputs.exists == 'false'
         uses: softprops/action-gh-release@v2
         continue-on-error: true
         with:
@@ -164,7 +149,8 @@ jobs:
             Assets are raw CMake install trees for monolithic SHARED and STATIC.
             DAWN_GIT.txt contains the exact commit. SHA256SUMS included.
           files: |
-            dawn-windows-x64-mono-*.zip
-            SHA256SUMS
-            DAWN_GIT.txt
+            dawn-nightly/dawn-windows-x64-mono-*.zip
+            dawn-nightly/SHA256SUMS
+            dawn-nightly/DAWN_GIT.txt
           fail_on_unmatched_files: true
+          overwrite_files: false
