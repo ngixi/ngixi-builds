@@ -16,51 +16,71 @@ jobs:
       PYTHONPATH: C:\tools\Python313\Lib
 
     steps:
+      # --- Force correct Python for all following steps ---
       - name: Prepend real Python to PATH
-        shell: pwsh
+        shell: powershell
         run: |
           $env:PATH = "C:\tools\Python313;C:\tools\Python313\Scripts;" + $env:PATH
           [System.Environment]::SetEnvironmentVariable('PATH', $env:PATH, 'Process')
+          if (-not (Test-Path "C:\tools\Python313\python3.exe")) {
+            Copy-Item "C:\tools\Python313\python.exe" "C:\tools\Python313\python3.exe" -Force
+          }
+          Write-Host "Python version check:"
           python --version
           python3 --version
           where python
           where python3
 
+      # --- Source checkout ---
       - name: Checkout repository
         uses: actions/checkout@v4
         with:
           path: ngixi-builds
 
+      # --- Environment setup ---
       - name: Setup MSVC
+        shell: powershell
         run: |
           & "${{ github.workspace }}\ngixi-builds\.github\workflows\scripts\setup-msvc.ps1"
 
       - name: Setup Windows SDK
+        shell: powershell
         run: |
           & "${{ github.workspace }}\ngixi-builds\.github\workflows\scripts\setup-windows-sdk.ps1"
 
+      # --- Clone & sync Dawn ---
       - name: Clone Dawn repository
+        shell: powershell
         run: |
           if (-not (Test-Path $env:DAWN_DIR)) {
             git clone https://dawn.googlesource.com/dawn $env:DAWN_DIR
           }
 
       - name: Sync dependencies with gclient
+        shell: powershell
         run: |
           cd $env:DAWN_DIR
-          cp scripts/standalone.gclient .gclient
+          Copy-Item scripts/standalone.gclient .gclient -Force
           gclient sync
 
+      # --- Python deps for generator ---
       - name: Install Python dependencies for generator
+        shell: powershell
         run: |
+          python -m pip install --upgrade pip
           python -m pip install jinja2 markupsafe ply
+          python -m pip show jinja2
 
+      # --- Run Dawn code generator ---
       - name: Run code generator (isolated)
+        shell: powershell
         run: |
           cd $env:DAWN_DIR
           python generator/dawn_json_generator.py --json generator/dawn.json --output generated
 
+      # --- Configure build ---
       - name: Configure Dawn build
+        shell: powershell
         run: |
           cd $env:DAWN_DIR
           cmake -S . -B $env:BUILD_DIR -G Ninja `
@@ -78,12 +98,16 @@ jobs:
             -DDAWN_ENABLE_VULKAN=ON `
             -DDAWN_ENABLE_D3D12=ON
 
+      # --- Build ---
       - name: Build Dawn libraries
+        shell: powershell
         run: |
           cd $env:DAWN_DIR
           cmake --build $env:BUILD_DIR --parallel
 
+      # --- Install artifacts ---
       - name: Install Dawn to output directory
+        shell: powershell
         run: |
           cd $env:DAWN_DIR
           cmake --install $env:BUILD_DIR --prefix install/Release
