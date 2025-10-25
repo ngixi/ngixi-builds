@@ -13,6 +13,10 @@ jobs:
       DEPOT_TOOLS_WIN_TOOLCHAIN: 0
 
     steps:
+      - name: Setup MSVC
+        run: |
+          & "${{ github.workspace }}\.github\workflows\scripts\setup-msvc.ps1"
+          
       - name: Checkout Dawn
         run: |
           if (-not (Test-Path dawn)) {
@@ -28,7 +32,7 @@ jobs:
       - name: Configure CMake
         run: |
           cd dawn
-          cmake -S . -B out/Release -DDAWN_FETCH_DEPENDENCIES=ON -DDAWN_ENABLE_INSTALL=ON -DCMAKE_BUILD_TYPE=Release -DCMAKE_C_COMPILER=cl -DCMAKE_CXX_COMPILER=cl -GNinja
+          cmake -S . -B out/Release -DDAWN_FETCH_DEPENDENCIES=ON -DDAWN_ENABLE_INSTALL=ON -DCMAKE_BUILD_TYPE=Release -GNinja
 
       - name: Build Dawn
         run: |
