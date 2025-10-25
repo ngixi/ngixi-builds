@@ -13,6 +13,9 @@ jobs:
       DEPOT_TOOLS_WIN_TOOLCHAIN: 0
 
     steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+        
       - name: Setup MSVC
         run: |
           & "${{ github.workspace }}\.github\workflows\scripts\setup-msvc.ps1"
