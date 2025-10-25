@@ -14,9 +14,18 @@ jobs:
       BUILD_DIR: out/Release
       PYTHONHOME: C:\tools\Python313
       PYTHONPATH: C:\tools\Python313\Lib
-      PATH: C:\tools\Python313;C:\tools\Python313\Scripts;${{ runner.env.PATH }}
 
     steps:
+      - name: Prepend real Python to PATH
+        shell: pwsh
+        run: |
+          $env:PATH = "C:\tools\Python313;C:\tools\Python313\Scripts;" + $env:PATH
+          [System.Environment]::SetEnvironmentVariable('PATH', $env:PATH, 'Process')
+          python --version
+          python3 --version
+          where python
+          where python3
+
       - name: Checkout repository
         uses: actions/checkout@v4
         with:
@@ -29,13 +38,6 @@ jobs:
       - name: Setup Windows SDK
         run: |
           & "${{ github.workspace }}\ngixi-builds\.github\workflows\scripts\setup-windows-sdk.ps1"
-
-      - name: Verify Python environment
-        run: |
-          where python
-          where python3
-          python --version
-          python3 --version
 
       - name: Clone Dawn repository
         run: |
