@@ -46,7 +46,7 @@ jobs:
       - name: Build Dawn
         run: |
           cd dawn
-          cmake --build out/Release
+          cmake --build out/Release --parallel
 
       - name: Install Dawn
         run: |

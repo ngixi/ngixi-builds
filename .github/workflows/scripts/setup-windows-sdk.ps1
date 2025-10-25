@@ -40,9 +40,11 @@ foreach ($basePath in $sdkPaths) {
                     $umInclude = Join-Path $includeBase "um"
                     $ucrtInclude = Join-Path $includeBase "ucrt"
                     $sharedInclude = Join-Path $includeBase "shared"
+                    $winrtInclude = Join-Path $includeBase "winrt"
+                    $cppwinrtInclude = Join-Path $includeBase "cppwinrt"
                     
                     Write-Host "SDK includes at: $includeBase"
-                    $env:INCLUDE = "$umInclude;$ucrtInclude;$sharedInclude;$env:INCLUDE"
+                    $env:INCLUDE = "$umInclude;$ucrtInclude;$sharedInclude;$winrtInclude;$cppwinrtInclude;$env:INCLUDE"
                 }
                 
                 Write-Host "Windows SDK environment configured successfully"
