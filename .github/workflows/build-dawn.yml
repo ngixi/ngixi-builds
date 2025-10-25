@@ -26,31 +26,30 @@ jobs:
         run: |
           & "${{ github.workspace }}\ngixi-builds\.github\workflows\scripts\setup-windows-sdk.ps1"
           
-      - name: Checkout Dawn
+      - name: Clone Dawn repository
         run: |
           if (-not (Test-Path dawn)) {
             git clone https://dawn.googlesource.com/dawn
           }
           cd dawn
 
-      - name: Fetch dependencies
+      - name: Sync dependencies with gclient
         run: |
           cd dawn
-          python tools/fetch_dawn_dependencies.py
+          cp scripts/standalone.gclient .gclient
+          gclient sync
 
-      - name: Configure CMake
+      - name: Configure Dawn build with CMake
         run: |
           cd dawn
-          $env:PATH = "${{ github.workspace }}\dawn\out\Release;$env:PATH"
-          cmake -S . -B out/Release -DDAWN_FETCH_DEPENDENCIES=ON -DDAWN_ENABLE_INSTALL=ON -DCMAKE_BUILD_TYPE=Release -DBUILD_SHARED_LIBS=ON -DDAWN_BUILD_MONOLITHIC_LIBRARY=OFF -GNinja
+          cmake -S . -B out/Release -DDAWN_ENABLE_INSTALL=ON -DCMAKE_BUILD_TYPE=Release -GNinja
 
-      - name: Build Dawn
+      - name: Build Dawn libraries
         run: |
           cd dawn
-          $env:PATH = "${{ github.workspace }}\dawn\out\Release;$env:PATH"
           cmake --build out/Release --parallel
 
-      - name: Install Dawn
+      - name: Install Dawn to output directory
         run: |
           cd dawn
           cmake --install out/Release --prefix install/Release
