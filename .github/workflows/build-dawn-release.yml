@@ -30,9 +30,13 @@ jobs:
                   }
               } |
               Sort-Object -Unique
-          if ($tags.Count -eq 0) { exit 1 }
+          if ($tags.Count -eq 0) {
+            Write-Error "No tags found"
+            exit 1
+          }
           # Output only the newest tag
           $latest = $tags | Sort-Object -Descending | Select-Object -First 1
+          Write-Host "Latest tag: $latest"
           "DAWN_TAG=$latest" | Out-File -Encoding utf8 -Append $env:GITHUB_ENV
 
       - name: Checkout tag
