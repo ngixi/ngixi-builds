@@ -12,6 +12,9 @@ jobs:
       DEPOT_TOOLS_WIN_TOOLCHAIN: 0
       DAWN_DIR: dawn
       BUILD_DIR: out/Release
+      PYTHONHOME: C:\tools\Python313
+      PYTHONPATH: C:\tools\Python313\Lib
+      PATH: C:\tools\Python313;C:\tools\Python313\Scripts;${{ env.PATH }}
 
     steps:
       - name: Checkout repository
@@ -27,6 +30,13 @@ jobs:
         run: |
           & "${{ github.workspace }}\ngixi-builds\.github\workflows\scripts\setup-windows-sdk.ps1"
 
+      - name: Verify Python environment
+        run: |
+          where python
+          where python3
+          python --version
+          python3 --version
+
       - name: Clone Dawn repository
         run: |
           if (-not (Test-Path $env:DAWN_DIR)) {
@@ -41,12 +51,12 @@ jobs:
 
       - name: Install Python dependencies for generator
         run: |
-          pip install jinja2 markupsafe ply
+          python -m pip install jinja2 markupsafe ply
 
       - name: Run code generator (isolated)
         run: |
           cd $env:DAWN_DIR
-          python3 generator/dawn_json_generator.py --json generator/dawn.json --output generated
+          python generator/dawn_json_generator.py --json generator/dawn.json --output generated
 
       - name: Configure Dawn build
         run: |
