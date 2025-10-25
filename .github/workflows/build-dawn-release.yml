@@ -1,0 +1,141 @@
+name: Nightly Dawn Build & Release (Windows)
+
+on:
+  schedule: [{ cron: "0 6 * * *" }]
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  win-x64:
+    runs-on: WIN-BUILD
+    timeout-minutes: 180
+    env:
+      VS_DEV_CMD: C:\Program Files\Microsoft Visual Studio\2022\Community\VC\Auxiliary\Build\vcvars64.bat
+      SDK_VER: 10.0.26100.0
+      DEPOT_TOOLS_WIN_TOOLCHAIN: 0
+      GIT_CACHE_PATH: C:\cache\git
+      SCCACHE_DIR: C:\cache\sccache
+      # fixed roots on your self-hosted machine
+      SRC_ROOT: C:\build\dawn\src
+      OUT_SHARED: C:\build\dawn\out\mono-shared
+      OUT_STATIC: C:\build\dawn\out\mono-static
+      INST_SHARED: C:\build\dawn\install\mono-shared
+      INST_STATIC: C:\build\dawn\install\mono-static
+
+    steps:
+      - name: Resolve latest upstream tag
+        shell: pwsh
+        run: |
+          if (!(Test-Path $env:SRC_ROOT)) { New-Item -ItemType Directory $env:SRC_ROOT | Out-Null }
+          if (Test-Path C:\build\dawn\up) { Remove-Item -Recurse -Force C:\build\dawn\up }
+          git clone --filter=blob:none --quiet https://dawn.googlesource.com/dawn C:\build\dawn\up
+          cd C:\build\dawn\up
+          git fetch --tags --force --quiet
+          $tag = git for-each-ref refs/tags --sort=-creatordate --format="%(refname:strip=2)" --count=1
+          if (-not $tag) { Write-Error "No upstream tags found."; exit 1 }
+          $safe = $tag -replace '[^0-9A-Za-z._-]','-'
+          "UPSTREAM_TAG=$tag"  >> $env:GITHUB_ENV
+          "SAFE_TAG=$safe"     >> $env:GITHUB_ENV
+
+      - name: Checkout/fast-forward source to tag (incremental)
+        shell: pwsh
+        run: |
+          if (!(Test-Path $env:SRC_ROOT\.git)) {
+            git clone --quiet https://dawn.googlesource.com/dawn $env:SRC_ROOT
+          }
+          cd $env:SRC_ROOT
+          git fetch --tags --force --quiet
+          git checkout --quiet "$env:UPSTREAM_TAG"
+          git rev-parse --short HEAD | Out-File -Encoding ascii C:\build\dawn\DAWN_GIT.txt
+
+      - name: depot_tools + DEPS (incremental)
+        shell: pwsh
+        run: |
+          cd $env:SRC_ROOT
+          Copy-Item scripts/standalone.gclient .gclient -Force
+          # GIT_CACHE_PATH speeds up DEPS fetches
+          gclient sync
+
+      # ---------- Configure with sccache (once, then reused) ----------
+      - name: Configure SHARED (kept between runs)
+        shell: cmd
+        run: |
+          call "%VS_DEV_CMD%"
+          cmake -S %SRC_ROOT% -B %OUT_SHARED% -G Ninja ^
+            -DCMAKE_BUILD_TYPE=Release ^
+            -DCMAKE_C_COMPILER=cl ^
+            -DCMAKE_CXX_COMPILER=cl ^
+            -DCMAKE_C_COMPILER_LAUNCHER=sccache ^
+            -DCMAKE_CXX_COMPILER_LAUNCHER=sccache ^
+            -DCMAKE_CXX_FLAGS="/DNOMINMAX /DWIN32_LEAN_AND_MEAN" ^
+            -DCMAKE_SYSTEM_VERSION=%SDK_VER% ^
+            -DBUILD_SHARED_LIBS=OFF ^
+            -DDAWN_BUILD_MONOLITHIC_LIBRARY=SHARED ^
+            -DDAWN_ENABLE_INSTALL=ON
+
+      - name: Configure STATIC (kept between runs)
+        shell: cmd
+        run: |
+          call "%VS_DEV_CMD%"
+          cmake -S %SRC_ROOT% -B %OUT_STATIC% -G Ninja ^
+            -DCMAKE_BUILD_TYPE=Release ^
+            -DCMAKE_C_COMPILER=cl ^
+            -DCMAKE_CXX_COMPILER=cl ^
+            -DCMAKE_C_COMPILER_LAUNCHER=sccache ^
+            -DCMAKE_CXX_COMPILER_LAUNCHER=sccache ^
+            -DCMAKE_CXX_FLAGS="/DNOMINMAX /DWIN32_LEAN_AND_MEAN" ^
+            -DCMAKE_SYSTEM_VERSION=%SDK_VER% ^
+            -DBUILD_SHARED_LIBS=OFF ^
+            -DDAWN_BUILD_MONOLITHIC_LIBRARY=STATIC ^
+            -DDAWN_ENABLE_INSTALL=ON
+
+      # ---------- Build incrementally ----------
+      - name: Build SHARED
+        shell: cmd
+        run: |
+          call "%VS_DEV_CMD%"
+          cmake --build %OUT_SHARED% --parallel
+
+      - name: Build STATIC
+        shell: cmd
+        run: |
+          call "%VS_DEV_CMD%"
+          cmake --build %OUT_STATIC% --parallel
+
+      # ---------- Install to persistent prefixes (don’t clean) ----------
+      - name: Install SHARED
+        shell: cmd
+        run: |
+          call "%VS_DEV_CMD%"
+          cmake --install %OUT_SHARED% --prefix %INST_SHARED%
+
+      - name: Install STATIC
+        shell: cmd
+        run: |
+          call "%VS_DEV_CMD%"
+          cmake --install %OUT_STATIC% --prefix %INST_STATIC%
+
+      # ---------- Zip the full install trees ----------
+      - name: Zip installs
+        shell: pwsh
+        run: |
+          $ver = $env:SAFE_TAG
+          cd C:\build\dawn\install
+          Compress-Archive -Path mono-shared -DestinationPath C:\build\dawn\dawn-windows-x64-mono-shared-$ver.zip -Force
+          Compress-Archive -Path mono-static -DestinationPath C:\build\dawn\dawn-windows-x64-mono-static-$ver.zip -Force
+          Get-FileHash C:\build\dawn\dawn-windows-x64-mono-*.zip -Algorithm SHA256 | % { "$($_.Hash)  $($_.Path)" } | Out-File -Encoding ascii C:\build\dawn\SHA256SUMS
+
+      # ---------- Release (creates tag if new) ----------
+      - name: Create/append GitHub Release
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: dawn-${{ env.SAFE_TAG }}
+          target_commitish: ${{ github.sha }}
+          name: Dawn ${{ env.UPSTREAM_TAG }} (Windows x64)
+          body: Raw CMake install trees. Includes DAWN_GIT.txt and SHA256SUMS.
+          files: |
+            C:\build\dawn\dawn-windows-x64-mono-*.zip
+            C:\build\dawn\SHA256SUMS
+            C:\build\dawn\DAWN_GIT.txt
