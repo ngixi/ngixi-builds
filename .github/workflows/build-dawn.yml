@@ -46,6 +46,7 @@ jobs:
       - name: Build Dawn
         run: |
           cd dawn
+          $env:PATH = "${{ github.workspace }}\dawn\out\Release;$env:PATH"
           cmake --build out/Release --parallel
 
       - name: Install Dawn
