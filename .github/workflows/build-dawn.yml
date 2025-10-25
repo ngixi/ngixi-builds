@@ -8,48 +8,66 @@ on:
 jobs:
   build-windows:
     runs-on: WIN-BUILD
-    
     env:
       DEPOT_TOOLS_WIN_TOOLCHAIN: 0
+      DAWN_DIR: dawn
+      BUILD_DIR: out/Release
 
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4
         with:
           path: ngixi-builds
-        
+
       - name: Setup MSVC
         run: |
           & "${{ github.workspace }}\ngixi-builds\.github\workflows\scripts\setup-msvc.ps1"
-          
+
       - name: Setup Windows SDK
         run: |
           & "${{ github.workspace }}\ngixi-builds\.github\workflows\scripts\setup-windows-sdk.ps1"
-          
+
       - name: Clone Dawn repository
         run: |
-          if (-not (Test-Path dawn)) {
-            git clone https://dawn.googlesource.com/dawn
+          if (-not (Test-Path $env:DAWN_DIR)) {
+            git clone https://dawn.googlesource.com/dawn $env:DAWN_DIR
           }
-          cd dawn
 
       - name: Sync dependencies with gclient
         run: |
-          cd dawn
+          cd $env:DAWN_DIR
           cp scripts/standalone.gclient .gclient
           gclient sync
 
-      - name: Configure Dawn build with CMake
+      - name: Run code generator (isolated)
         run: |
-          cd dawn
-          cmake -S . -B out/Release -DDAWN_ENABLE_INSTALL=ON -DCMAKE_BUILD_TYPE=Release -DBUILD_SHARED_LIBS=ON -DDAWN_BUILD_MONOLITHIC_LIBRARY=OFF -GNinja
+          cd $env:DAWN_DIR
+          python3 generator/dawn_json_generator.py --json generator/dawn.json --output generated
+
+      - name: Configure Dawn build
+        run: |
+          cd $env:DAWN_DIR
+          cmake -S . -B $env:BUILD_DIR -G Ninja `
+            -DCMAKE_BUILD_TYPE=Release `
+            -DDAWN_ENABLE_INSTALL=ON `
+            -DDAWN_BUILD_MONOLITHIC_LIBRARY=SHARED `
+            -DDAWN_BUILD_SAMPLES=OFF `
+            -DDAWN_BUILD_TESTS=OFF `
+            -DTINT_BUILD_TESTS=OFF `
+            -DBUILD_SHARED_LIBS=OFF `
+            -Dprotobuf_BUILD_SHARED_LIBS=OFF `
+            -DDAWN_ENABLE_CPP_API=OFF `
+            -DDAWN_ENABLE_DESKTOP_GL=OFF `
+            -DDAWN_ENABLE_METAL=OFF `
+            -DDAWN_ENABLE_VULKAN=ON `
+            -DDAWN_ENABLE_D3D12=ON
 
       - name: Build Dawn libraries
         run: |
-          cd dawn
-          cmake --build out/Release --parallel
+          cd $env:DAWN_DIR
+          cmake --build $env:BUILD_DIR --parallel
 
       - name: Install Dawn to output directory
         run: |
-          cd dawn
-          cmake --install out/Release --prefix install/Release
+          cd $env:DAWN_DIR
+          cmake --install $env:BUILD_DIR --prefix install/Release
