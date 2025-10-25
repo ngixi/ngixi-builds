@@ -7,23 +7,28 @@ jobs:
   build-windows:
     runs-on: WIN-BUILD
     
+    env:
+      DEPOT_TOOLS_WIN_TOOLCHAIN: 0
+
     steps:
       - name: Checkout Dawn
         run: |
-          git clone https://dawn.googlesource.com/dawn
+          if (-not (Test-Path dawn)) {
+            git clone https://dawn.googlesource.com/dawn
+          }
           cd dawn
-          
+
       - name: Fetch dependencies
         run: |
           cd dawn
           cp scripts/standalone.gclient .gclient
           gclient sync
-          
+
       - name: Generate build files
         run: |
           cd dawn
           gn gen out/Release --args="is_debug=false"
-          
+
       - name: Build Dawn
         run: |
           cd dawn
