@@ -17,39 +17,71 @@ jobs:
           if (-not (Test-Path dawn)) {
             git clone https://dawn.googlesource.com/dawn
           }
-          cd dawn
 
-      - name: Fetch dependencies
+      - name: Fetch deps
         run: |
           cd dawn
           cp scripts/standalone.gclient .gclient
           gclient sync
 
-      - name: Configure (MSVC + Ninja + install)
+      # Monolithic DLL => one webgpu_dawn.dll
+      - name: Configure (monolithic SHARED)
         shell: cmd
         run: |
           call "C:\Program Files\Microsoft Visual Studio\2022\Community\VC\Auxiliary\Build\vcvars64.bat"
           cd dawn
-          if exist out\Release rd /s /q out\Release
-          cmake -S . -B out\Release -G Ninja ^
+          if exist out\mono-shared rd /s /q out\mono-shared
+          cmake -S . -B out\mono-shared -G Ninja ^
             -DCMAKE_BUILD_TYPE=Release ^
             -DCMAKE_C_COMPILER=cl ^
             -DCMAKE_CXX_COMPILER=cl ^
             -DCMAKE_CXX_FLAGS="/DNOMINMAX /DWIN32_LEAN_AND_MEAN" ^
             -DCMAKE_SYSTEM_VERSION=10.0.26100.0 ^
-            -DDAWN_ENABLE_INSTALL=ON ^
-            -DBUILD_SHARED_LIBS=ON
+            -DBUILD_SHARED_LIBS=OFF ^
+            -DDAWN_BUILD_MONOLITHIC_LIBRARY=SHARED ^
+            -DDAWN_ENABLE_INSTALL=ON
 
-      - name: Build
+      - name: Build (monolithic SHARED)
         shell: cmd
         run: |
           call "C:\Program Files\Microsoft Visual Studio\2022\Community\VC\Auxiliary\Build\vcvars64.bat"
           cd dawn
-          cmake --build out\Release --parallel
+          cmake --build out\mono-shared --parallel
 
-      - name: Install
+      - name: Install (monolithic SHARED)
         shell: cmd
         run: |
           call "C:\Program Files\Microsoft Visual Studio\2022\Community\VC\Auxiliary\Build\vcvars64.bat"
           cd dawn
-          cmake --install out\Release --prefix install\Release
+          cmake --install out\mono-shared --prefix install\mono-shared
+
+      # Monolithic static => one webgpu_dawn.lib
+      - name: Configure (monolithic STATIC)
+        shell: cmd
+        run: |
+          call "C:\Program Files\Microsoft Visual Studio\2022\Community\VC\Auxiliary\Build\vcvars64.bat"
+          cd dawn
+          if exist out\mono-static rd /s /q out\mono-static
+          cmake -S . -B out\mono-static -G Ninja ^
+            -DCMAKE_BUILD_TYPE=Release ^
+            -DCMAKE_C_COMPILER=cl ^
+            -DCMAKE_CXX_COMPILER=cl ^
+            -DCMAKE_CXX_FLAGS="/DNOMINMAX /DWIN32_LEAN_AND_MEAN" ^
+            -DCMAKE_SYSTEM_VERSION=10.0.26100.0 ^
+            -DBUILD_SHARED_LIBS=OFF ^
+            -DDAWN_BUILD_MONOLITHIC_LIBRARY=STATIC ^
+            -DDAWN_ENABLE_INSTALL=ON
+
+      - name: Build (monolithic STATIC)
+        shell: cmd
+        run: |
+          call "C:\Program Files\Microsoft Visual Studio\2022\Community\VC\Auxiliary\Build\vcvars64.bat"
+          cd dawn
+          cmake --build out\mono-static --parallel
+
+      - name: Install (monolithic STATIC)
+        shell: cmd
+        run: |
+          call "C:\Program Files\Microsoft Visual Studio\2022\Community\VC\Auxiliary\Build\vcvars64.bat"
+          cd dawn
+          cmake --install out\mono-static --prefix install\mono-static
