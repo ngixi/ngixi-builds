@@ -1,98 +1,35 @@
 name: Build Dawn
 
 on:
-  push:
-    branches: [ main ]
   workflow_dispatch:
 
 jobs:
   build-windows:
     runs-on: WIN-BUILD
+    
     env:
       DEPOT_TOOLS_WIN_TOOLCHAIN: 0
-      DEPOT_TOOLS_PYTHON3: C:\tools\Python313\python.exe
-      PYTHONHOME: C:\tools\Python313
-      PYTHONPATH: C:\tools\Python313\Lib
-      DAWN_DIR: dawn
-      BUILD_DIR: out/Release
 
     steps:
-      # --- Force correct Python for all following steps ---
-      - name: Prepend real Python to PATH
-        shell: powershell
+      - name: Checkout Dawn
         run: |
-          $env:PATH = "C:\tools\Python313;C:\tools\Python313\Scripts;" + $env:PATH
-          [System.Environment]::SetEnvironmentVariable('PATH', $env:PATH, 'Process')
-          if (-not (Test-Path "C:\tools\Python313\python3.exe")) {
-            Copy-Item "C:\tools\Python313\python.exe" "C:\tools\Python313\python3.exe" -Force
+          if (-not (Test-Path dawn)) {
+            git clone https://dawn.googlesource.com/dawn
           }
-          Write-Host "Python version check:"
-          python --version
-          python3 --version
-          where python
-          where python3
-          Write-Host "DEPOT_TOOLS_PYTHON3=$env:DEPOT_TOOLS_PYTHON3"
+          cd dawn
 
-      # --- Source checkout ---
-      - name: Checkout repository
-        uses: actions/checkout@v4
-        with:
-          path: ngixi-builds
-
-      # --- Environment setup ---
-      - name: Setup MSVC
-        shell: powershell
+      - name: Fetch dependencies
         run: |
-          & "${{ github.workspace }}\ngixi-builds\.github\workflows\scripts\setup-msvc.ps1"
-
-      - name: Setup Windows SDK
-        shell: powershell
-        run: |
-          & "${{ github.workspace }}\ngixi-builds\.github\workflows\scripts\setup-windows-sdk.ps1"
-
-      # --- Clone & sync Dawn ---
-      - name: Clone Dawn repository
-        shell: powershell
-        run: |
-          if (-not (Test-Path $env:DAWN_DIR)) {
-            git clone https://dawn.googlesource.com/dawn $env:DAWN_DIR
-          }
-
-      - name: Sync dependencies with gclient
-        shell: powershell
-        run: |
-          cd $env:DAWN_DIR
-          Copy-Item scripts/standalone.gclient .gclient -Force
-          # explicitly tell depot_tools to use the correct python
-          $env:DEPOT_TOOLS_PYTHON3 = "C:\tools\Python313\python.exe"
-          Write-Host "Using depot_tools python: $env:DEPOT_TOOLS_PYTHON3"
+          cd dawn
+          cp scripts/standalone.gclient .gclient
           gclient sync
 
-      # --- Python deps for generator ---
-      - name: Install Python dependencies for generator
-        shell: powershell
+      - name: Generate build files
         run: |
-          python -m pip install --upgrade pip
-          python -m pip install jinja2 markupsafe ply
-          python -m pip show jinja2
+          cd dawn
+          gn gen out/Release --args="is_debug=false"
 
-      # --- Run Dawn code generator ---
-      - name: Run code generator (isolated)
-        shell: powershell
+      - name: Build Dawn
         run: |
-          cd $env:DAWN_DIR
-          python generator/dawn_json_generator.py --json generator/dawn.json --output generated
-
-      # --- Configure build ---
-      - name: Configure Dawn build
-        shell: powershell
-        run: |
-          cd $env:DAWN_DIR
-          cmake -S . -B $env:BUILD_DIR -G Ninja `
-            -DCMAKE_BUILD_TYPE=Release `
-            -DDAWN_ENABLE_INSTALL=ON `
-            -DDAWN_BUILD_MONOLITHIC_LIBRARY=SHARED `
-            -DDAWN_BUILD_SAMPLES=OFF `
-            -DDAWN_BUILD_TESTS=OFF `
-            -DTINT_BUILD_TESTS=OFF `
-            -DBUILD_SHARED_LIBS=OFF `
+          cd dawn
+          ninja -C out/Release
