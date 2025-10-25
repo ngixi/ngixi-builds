@@ -1,6 +1,8 @@
 name: Build Dawn
 
 on:
+  push:
+    branches: [ main ]
   workflow_dispatch:
 
 jobs:
@@ -24,12 +26,17 @@ jobs:
           cp scripts/standalone.gclient .gclient
           gclient sync
 
-      - name: Generate build files
+      - name: Configure with CMake (enable install)
         run: |
           cd dawn
-          gn gen out/Release --args="is_debug=false"
+          cmake -S . -B out/Release -G Ninja -DCMAKE_BUILD_TYPE=Release -DDAWN_ENABLE_INSTALL=ON
 
-      - name: Build Dawn
+      - name: Build with CMake
         run: |
           cd dawn
-          ninja -C out/Release
+          cmake --build out/Release --parallel
+
+      - name: Install Dawn artifacts
+        run: |
+          cd dawn
+          cmake --install out/Release --prefix install/Release
