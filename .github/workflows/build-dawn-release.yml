@@ -134,8 +134,6 @@ jobs:
           Compress-Archive -Path .\install\mono-static -DestinationPath "..\dawn-windows-x64-mono-static-$env:DAWN_TAG.zip" -Force
           Get-FileHash "..\dawn-windows-x64-mono-*.zip" -Algorithm SHA256 |
             ForEach-Object { "$($_.Hash)  $($_.Path)" } | Out-File -Encoding ascii "..\SHA256SUMS"
-          # Also copy DAWN_GIT.txt to parent
-          Copy-Item ..\DAWN_GIT.txt ..\DAWN_GIT.txt -Force
 
       - name: Create Release and upload assets
         uses: softprops/action-gh-release@v2
