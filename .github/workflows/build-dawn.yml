@@ -39,6 +39,10 @@ jobs:
           cp scripts/standalone.gclient .gclient
           gclient sync
 
+      - name: Install Python dependencies for generator
+        run: |
+          pip install jinja2 markupsafe ply
+
       - name: Run code generator (isolated)
         run: |
           cd $env:DAWN_DIR
