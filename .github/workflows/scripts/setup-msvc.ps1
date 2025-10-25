@@ -21,6 +21,8 @@ if (Test-Path $vswhere) {
                 $msvcBinPath = Join-Path $msvcVersion.FullName "bin\Hostx64\x64"
                 $msvcLibPath = Join-Path $msvcVersion.FullName "lib\x64"
                 $msvcIncludePath = Join-Path $msvcVersion.FullName "include"
+                $atlmfcIncludePath = Join-Path $msvcVersion.FullName "atlmfc\include"
+                $atlmfcLibPath = Join-Path $msvcVersion.FullName "atlmfc\lib\x64"
                 
                 Write-Host "MSVC compiler found at: $msvcBinPath"
                 Write-Host "MSVC libraries at: $msvcLibPath"
@@ -32,6 +34,16 @@ if (Test-Path $vswhere) {
                 # Add MSVC lib and include paths
                 $env:LIB = "$msvcLibPath;$env:LIB"
                 $env:INCLUDE = "$msvcIncludePath;$env:INCLUDE"
+                
+                # Add ATL/MFC if available
+                if (Test-Path $atlmfcIncludePath) {
+                    Write-Host "ATL/MFC includes at: $atlmfcIncludePath"
+                    $env:INCLUDE = "$atlmfcIncludePath;$env:INCLUDE"
+                }
+                if (Test-Path $atlmfcLibPath) {
+                    Write-Host "ATL/MFC libraries at: $atlmfcLibPath"
+                    $env:LIB = "$atlmfcLibPath;$env:LIB"
+                }
                 
                 Write-Host "MSVC environment configured successfully"
                 Write-Host "cl.exe location: $(Get-Command cl.exe -ErrorAction SilentlyContinue | Select-Object -ExpandProperty Source)"
