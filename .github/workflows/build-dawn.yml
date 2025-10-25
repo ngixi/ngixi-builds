@@ -14,7 +14,7 @@ jobs:
       BUILD_DIR: out/Release
       PYTHONHOME: C:\tools\Python313
       PYTHONPATH: C:\tools\Python313\Lib
-      PATH: C:\tools\Python313;C:\tools\Python313\Scripts;${{ env.PATH }}
+      PATH: C:\tools\Python313;C:\tools\Python313\Scripts;${{ runner.env.PATH }}
 
     steps:
       - name: Checkout repository
