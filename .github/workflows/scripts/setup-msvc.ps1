@@ -19,32 +19,30 @@ if (Test-Path $vswhere) {
             
             if ($msvcVersion) {
                 $msvcBinPath = Join-Path $msvcVersion.FullName "bin\Hostx64\x64"
+                $msvcLibPath = Join-Path $msvcVersion.FullName "lib\x64"
+                $msvcIncludePath = Join-Path $msvcVersion.FullName "include"
+                
                 Write-Host "MSVC compiler found at: $msvcBinPath"
+                Write-Host "MSVC libraries at: $msvcLibPath"
+                Write-Host "MSVC includes at: $msvcIncludePath"
                 
                 # Add to PATH for this session
                 $env:PATH = "$msvcBinPath;$env:PATH"
                 
-                # Also add Windows SDK
-                $windowsSdkPath = "${env:ProgramFiles(x86)}\Windows Kits\10\bin"
-                if (Test-Path $windowsSdkPath) {
-                    $sdkVersion = Get-ChildItem $windowsSdkPath | Where-Object { $_.Name -match '^\d+\.\d+\.\d+\.\d+$' } | Sort-Object Name -Descending | Select-Object -First 1
-                    if ($sdkVersion) {
-                        $sdkBinPath = Join-Path $sdkVersion.FullName "x64"
-                        Write-Host "Windows SDK found at: $sdkBinPath"
-                        $env:PATH = "$sdkBinPath;$env:PATH"
-                    }
-                }
+                # Add MSVC lib and include paths
+                $env:LIB = "$msvcLibPath;$env:LIB"
+                $env:INCLUDE = "$msvcIncludePath;$env:INCLUDE"
                 
-                Write-Host "PATH updated successfully"
+                Write-Host "MSVC environment configured successfully"
                 Write-Host "cl.exe location: $(Get-Command cl.exe -ErrorAction SilentlyContinue | Select-Object -ExpandProperty Source)"
                 
-                # Export PATH for GitHub Actions
+                # Export for GitHub Actions
                 if ($env:GITHUB_PATH) {
                     Add-Content -Path $env:GITHUB_PATH -Value $msvcBinPath
-                    if ($sdkBinPath) {
-                        Add-Content -Path $env:GITHUB_PATH -Value $sdkBinPath
-                    }
-                    Write-Host "Added to GitHub Actions PATH"
+                }
+                if ($env:GITHUB_ENV) {
+                    Add-Content -Path $env:GITHUB_ENV -Value "LIB=$env:LIB"
+                    Add-Content -Path $env:GITHUB_ENV -Value "INCLUDE=$env:INCLUDE"
                 }
                 
                 exit 0
