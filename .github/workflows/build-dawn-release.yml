@@ -2,6 +2,8 @@ name: Nightly Build Dawn & Release
 
 on:
   workflow_dispatch:
+  schedule:
+    - cron: '0 0 * * *'  # Run daily at midnight UTC
 
 jobs:
   build-windows:
@@ -10,12 +12,23 @@ jobs:
       contents: write
     env:
       DEPOT_TOOLS_WIN_TOOLCHAIN: 0
+    defaults:
+      run:
+        working-directory: nightly-dawn-releastag-build
 
     steps:
+      - name: Create build directory
+        run: |
+          if (-not (Test-Path dawn-build)) {
+            New-Item -ItemType Directory -Path dawn-build
+          }
+        working-directory: .
+
       - name: Checkout ngixi-builds repo
         uses: actions/checkout@v4
         with:
           clean: false
+          path: dawn-build/ngixi-builds
 
       - name: Checkout Dawn
         run: |
