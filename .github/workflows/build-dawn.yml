@@ -26,11 +26,16 @@ jobs:
           cp scripts/standalone.gclient .gclient
           gclient sync
 
-      - name: Configure with CMake (enable install)
+      - name: Configure with CMake (MSVC + install)
         run: |
-          cd dawn
-          cmake -S . -B out/Release -G Ninja -DCMAKE_BUILD_TYPE=Release -DDAWN_ENABLE_INSTALL=ON
-
+            cd dawn
+            cmake -S . -B out/Release -G Ninja ^
+            -DCMAKE_BUILD_TYPE=Release ^
+            -DCMAKE_C_COMPILER=cl ^
+            -DCMAKE_CXX_COMPILER=cl ^
+            -DCMAKE_CXX_FLAGS="/DNOMINMAX" ^
+            -DDAWN_ENABLE_INSTALL=ON
+            
       - name: Build with CMake
         run: |
           cd dawn
