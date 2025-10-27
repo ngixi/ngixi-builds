@@ -6,4 +6,4 @@ on:
 jobs:
   build-windows:
     name: Build Dawn - Windows x64
-    uses: ./.github/workflows/templates/buildDawnWindowsRelease.yml
+    uses: ./.github/workflows/buildDawnWindowsRelease.yml

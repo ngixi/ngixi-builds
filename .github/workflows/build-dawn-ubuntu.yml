@@ -9,4 +9,4 @@ on:
 jobs:
   build-linux:
     name: Build Dawn - Linux x64
-    uses: ./.github/workflows/templates/buildDawnLinuxRelease.yml
+    uses: ./.github/workflows/buildDawnLinuxRelease.yml
