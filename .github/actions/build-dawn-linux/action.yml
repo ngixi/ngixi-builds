@@ -8,21 +8,24 @@ runs:
       shell: bash
       run: |
         apt-get update
-        apt-get install -y \
+        apt-get install -y --no-install-recommends \
           git \
           curl \
+          ca-certificates \
+          wget
+        apt-get install -y --no-install-recommends \
           python3 \
-          python3-pip \
+          python3-pip
+        apt-get install -y --no-install-recommends \
           pkg-config \
           ninja-build \
-          cmake \
+          cmake
+        apt-get install -y --no-install-recommends \
           libxrandr-dev \
           libxinerama-dev \
           libxcursor-dev \
           mesa-common-dev \
-          libx11-xcb-dev \
-          ca-certificates \
-          wget
+          libx11-xcb-dev
 
     - name: Install Go 1.23+
       shell: bash
