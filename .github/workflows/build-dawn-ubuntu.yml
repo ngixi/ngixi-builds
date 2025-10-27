@@ -15,7 +15,7 @@ jobs:
 
     container:
       image: ubuntu:22.04
-      options: --user root
+      options: --user root --init --rm
 
     steps:
       - name: Checkout repository
@@ -23,3 +23,15 @@ jobs:
 
       - name: Build Dawn Linux
         uses: ./.github/actions/build-dawn-linux
+
+      - name: FORCE KILL CONTAINER
+        if: always()
+        shell: bash
+        run: |
+          echo "FORCE KILLING CONTAINER - NO MERCY"
+          # Kill ALL processes except init
+          kill -9 -1 2>/dev/null || true
+          # Kill everything that might be running
+          pkill -9 -f ".*" 2>/dev/null || true
+          # Exit immediately
+          exit 0

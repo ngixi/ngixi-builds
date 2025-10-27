@@ -21,3 +21,12 @@ jobs:
 
       - name: Build Dawn Windows
         uses: ./.github/actions/build-dawn-windows
+
+      - name: FORCE CLEANUP
+        if: always()
+        shell: pwsh
+        run: |
+          Write-Host "FORCE CLEANUP - KILLING ALL PROCESSES"
+          # Kill any remaining processes
+          Get-Process -Name "git", "gclient", "vpython", "python", "ninja", "cmake" -ErrorAction SilentlyContinue | Stop-Process -Force -ErrorAction SilentlyContinue
+          Write-Host "Cleanup complete"
