@@ -59,8 +59,9 @@ jobs:
       - name: Fetch dependencies with gclient
         run: |
           export PATH="/opt/depot_tools:/usr/local/go/bin:$PATH"
+          export VPYTHON_BYPASS="manually managed python not supported by chrome operations"
           cd ${{github.workspace}}/dawn
-          gclient sync
+          gclient sync --no-history
 
       - name: Configure Dawn (CMake + Ninja)
         run: |
