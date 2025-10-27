@@ -6,4 +6,6 @@ on:
 jobs:
   build-windows:
     name: Build Dawn - Windows x64
+    permissions:
+      contents: write
     uses: ./.github/workflows/buildDawnWindowsRelease.yml
