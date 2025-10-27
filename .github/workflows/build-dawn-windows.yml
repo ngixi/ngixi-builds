@@ -1,4 +1,4 @@
-name: Nightly Build Dawn & Release
+name: Build Dawn Windows & Release
 
 on:
   workflow_dispatch:
@@ -21,34 +21,23 @@ jobs:
           clean: false
           path: dawn-nightly/ngixi-builds
 
+      - name: Load build versions
+        shell: pwsh
+        run: |
+          Get-Content .github/workflows/build-versions.env | ForEach-Object {
+            if ($_ -match '^([^=]+)=(.*)$') {
+              $key = $matches[1].ToUpper()
+              $value = $matches[2]
+              Write-Host "Setting $key=$value"
+              "$key=$value" | Out-File -Encoding utf8 -Append $env:GITHUB_ENV
+            }
+          }
+
       - name: Checkout Dawn
         run: |
           if (-not (Test-Path dawn)) {
-            git clone https://github.com/google/dawn
+            git clone $env:DAWN_REPO dawn
           }
-
-      - name: Resolve newest upstream tag
-        shell: pwsh
-        run: |
-          $RepoUrl = 'https://github.com/google/dawn'
-          # Normalize URL (remove .git suffix if present)
-          $RepoUrl = $RepoUrl -replace '\.git$', ''
-          # Get tag list from remote
-          $tags = git ls-remote --tags $RepoUrl 2>$null |
-              ForEach-Object {
-                  if ($_ -match 'refs/tags/(.+)$') {
-                      $matches[1] -replace '\^\{\}$', ''
-                  }
-              } |
-              Sort-Object -Unique
-          if ($tags.Count -eq 0) {
-            Write-Error "No tags found"
-            exit 1
-          }
-          # Output only the newest tag
-          $latest = $tags | Sort-Object -Descending | Select-Object -First 1
-          Write-Host "Latest tag: $latest"
-          "DAWN_TAG=$latest" | Out-File -Encoding utf8 -Append $env:GITHUB_ENV
 
       - name: Checkout tag
         shell: pwsh
@@ -137,11 +126,12 @@ jobs:
         uses: softprops/action-gh-release@v2
         continue-on-error: true
         with:
-          tag_name: dawn-${{ env.DAWN_TAG }}
+          tag_name: ngixi-assets-${{ env.NGIXI_ASSET_VERSION }}
           target_commitish: ${{ github.sha }}
-          name: Dawn ${{ env.DAWN_TAG }} (Windows x64)
+          name: NGIXI Assets ${{ env.NGIXI_ASSET_VERSION }} (Dawn ${{ env.DAWN_TAG }})
           body: |
-            Automated build of upstream Dawn tag `${{ env.DAWN_TAG }}`.
+            NGIXI Assets v${{ env.NGIXI_ASSET_VERSION }}
+            Built from Dawn tag `${{ env.DAWN_TAG }}`.
             Assets are raw CMake install trees for monolithic SHARED and STATIC.
             DAWN_GIT.txt contains the exact commit. SHA256SUMS included.
           files: |
@@ -149,4 +139,4 @@ jobs:
             dawn-nightly/SHA256SUMS
             dawn-nightly/DAWN_GIT.txt
           fail_on_unmatched_files: true
-          overwrite_files: false
+          overwrite_files: true
