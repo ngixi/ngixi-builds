@@ -21,5 +21,85 @@ jobs:
       - name: Checkout repository
         uses: actions/checkout@v4
 
-      - name: Build Dawn Linux
-        uses: ./.github/actions/build-dawn-linux
+      - name: Install system dependencies
+        shell: bash
+        run: |
+          export DEBIAN_FRONTEND=noninteractive
+          apt-get update --fix-missing
+          apt-get install -y --no-install-recommends \
+            git \
+            curl \
+            python3 \
+            python3-pip \
+            pkg-config \
+            ninja-build \
+            cmake \
+            libxrandr-dev \
+            libxinerama-dev \
+            libxcursor-dev \
+            mesa-common-dev \
+            libx11-xcb-dev \
+            ca-certificates \
+            wget \
+            nodejs \
+            npm
+
+      - name: Install Go 1.23+
+        shell: bash
+        run: |
+          wget -q https://go.dev/dl/go1.23.0.linux-amd64.tar.gz
+          tar -C /usr/local -xzf go1.23.0.linux-amd64.tar.gz
+          echo "/usr/local/go/bin" >> $GITHUB_PATH
+
+      - name: Install depot_tools
+        shell: bash
+        run: |
+          git clone https://chromium.googlesource.com/chromium/tools/depot_tools.git /opt/depot_tools
+          echo "/opt/depot_tools" >> $GITHUB_PATH
+
+      - name: Configure Git
+        shell: bash
+        run: |
+          git config --global user.email "build@ngixi.local"
+          git config --global user.name "NGIXI Build Bot"
+          git config --global --add safe.directory '*'
+
+      - name: Checkout Dawn
+        shell: bash
+        run: |
+          cd ${{github.workspace}}
+          git clone https://github.com/google/dawn dawn
+          cd dawn
+          cp scripts/standalone.gclient .gclient
+
+      - name: Fetch dependencies with gclient
+        shell: bash
+        run: |
+          export PATH="/opt/depot_tools:/usr/local/go/bin:$PATH"
+          export VPYTHON_BYPASS="manually managed python not supported by chrome operations"
+          cd ${{github.workspace}}/dawn
+          gclient sync --no-history
+
+      - name: Configure Dawn (CMake + Ninja)
+        shell: bash
+        run: |
+          cd ${{github.workspace}}/dawn
+          mkdir -p out/Release
+          cd out/Release
+          cmake -GNinja \
+            -DCMAKE_BUILD_TYPE=Release \
+            -DDAWN_BUILD_MONOLITHIC_LIBRARY=SHARED \
+            -DDAWN_ENABLE_INSTALL=ON \
+            ../..
+
+      - name: Build Dawn
+        shell: bash
+        run: |
+          cd ${{github.workspace}}/dawn/out/Release
+          ninja
+
+      - name: Install Dawn libraries
+        shell: bash
+        run: |
+          cd ${{github.workspace}}/dawn/out/Release
+          ninja install
