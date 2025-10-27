@@ -1,0 +1,12 @@
+name: Build Dawn Ubuntu
+
+on:
+  push:
+    branches:
+      - main
+  workflow_dispatch:
+
+jobs:
+  build-linux:
+    name: Build Dawn - Linux x64
+    uses: ./.github/workflows/templates/buildDawnLinuxRelease.yml

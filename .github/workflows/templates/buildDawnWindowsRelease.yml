@@ -1,9 +1,7 @@
-name: Nightly Build Dawn & Release
+name: Build Dawn Windows Release Template
 
 on:
-  workflow_dispatch:
-  schedule:
-    - cron: '0 0 * * *'  # Run daily at midnight UTC
+  workflow_call:
 
 jobs:
   build-windows:
