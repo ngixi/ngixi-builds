@@ -1,11 +1,10 @@
-name: Build Dawn Windows
+name: Nightly Build Dawn & Release
 
 on:
   workflow_dispatch:
 
 jobs:
   build-windows:
-    name: Build Dawn - Windows x64
     runs-on: WIN-BUILD
     permissions:
       contents: write
@@ -16,17 +15,138 @@ jobs:
         working-directory: dawn-nightly
 
     steps:
-      - name: Checkout repository
+      - name: Checkout ngixi-builds repo
         uses: actions/checkout@v4
+        with:
+          clean: false
+          path: dawn-nightly/ngixi-builds
 
-      - name: Build Dawn Windows
-        uses: ./.github/actions/build-dawn-windows
+      - name: Checkout Dawn
+        run: |
+          if (-not (Test-Path dawn)) {
+            git clone https://github.com/google/dawn
+          }
 
-      - name: FORCE CLEANUP
-        if: always()
+      - name: Resolve newest upstream tag
         shell: pwsh
         run: |
-          Write-Host "FORCE CLEANUP - KILLING ALL PROCESSES"
-          # Kill any remaining processes
-          Get-Process -Name "git", "gclient", "vpython", "python", "ninja", "cmake" -ErrorAction SilentlyContinue | Stop-Process -Force -ErrorAction SilentlyContinue
-          Write-Host "Cleanup complete"
+          $RepoUrl = 'https://github.com/google/dawn'
+          # Normalize URL (remove .git suffix if present)
+          $RepoUrl = $RepoUrl -replace '\.git$', ''
+          # Get tag list from remote
+          $tags = git ls-remote --tags $RepoUrl 2>$null |
+              ForEach-Object {
+                  if ($_ -match 'refs/tags/(.+)$') {
+                      $matches[1] -replace '\^\{\}$', ''
+                  }
+              } |
+              Sort-Object -Unique
+          if ($tags.Count -eq 0) {
+            Write-Error "No tags found"
+            exit 1
+          }
+          # Output only the newest tag
+          $latest = $tags | Sort-Object -Descending | Select-Object -First 1
+          Write-Host "Latest tag: $latest"
+          "DAWN_TAG=$latest" | Out-File -Encoding utf8 -Append $env:GITHUB_ENV
+
+      - name: Checkout tag
+        shell: pwsh
+        run: |
+          cd dawn
+          git fetch --tags --force --quiet
+          git checkout --quiet "$env:DAWN_TAG"
+          git rev-parse --short HEAD | Out-File -Encoding ascii ..\DAWN_GIT.txt
+
+      - name: Fetch deps
+        run: |
+          cd dawn
+          cp scripts/standalone.gclient .gclient
+          gclient sync
+
+      # Monolithic DLL => one webgpu_dawn.dll
+      - name: Configure (monolithic SHARED)
+        shell: cmd
+        run: |
+          call "C:\Program Files\Microsoft Visual Studio\2022\Community\VC\Auxiliary\Build\vcvars64.bat"
+          cd dawn
+          cmake -S . -B out\mono-shared -G Ninja ^
+            -DCMAKE_BUILD_TYPE=Release ^
+            -DCMAKE_C_COMPILER=cl ^
+            -DCMAKE_CXX_COMPILER=cl ^
+            -DCMAKE_CXX_FLAGS="/DNOMINMAX /DWIN32_LEAN_AND_MEAN" ^
+            -DCMAKE_SYSTEM_VERSION=10.0.26100.0 ^
+            -DBUILD_SHARED_LIBS=OFF ^
+            -DDAWN_BUILD_MONOLITHIC_LIBRARY=SHARED ^
+            -DDAWN_ENABLE_INSTALL=ON
+
+      - name: Build (monolithic SHARED)
+        shell: cmd
+        run: |
+          call "C:\Program Files\Microsoft Visual Studio\2022\Community\VC\Auxiliary\Build\vcvars64.bat"
+          cd dawn
+          cmake --build out\mono-shared --parallel
+
+      - name: Install (monolithic SHARED)
+        shell: cmd
+        run: |
+          call "C:\Program Files\Microsoft Visual Studio\2022\Community\VC\Auxiliary\Build\vcvars64.bat"
+          cd dawn
+          cmake --install out\mono-shared --prefix install\mono-shared
+
+      # Monolithic static => one webgpu_dawn.lib
+      - name: Configure (monolithic STATIC)
+        shell: cmd
+        run: |
+          call "C:\Program Files\Microsoft Visual Studio\2022\Community\VC\Auxiliary\Build\vcvars64.bat"
+          cd dawn
+          cmake -S . -B out\mono-static -G Ninja ^
+            -DCMAKE_BUILD_TYPE=Release ^
+            -DCMAKE_C_COMPILER=cl ^
+            -DCMAKE_CXX_COMPILER=cl ^
+            -DCMAKE_CXX_FLAGS="/DNOMINMAX /DWIN32_LEAN_AND_MEAN" ^
+            -DCMAKE_SYSTEM_VERSION=10.0.26100.0 ^
+            -DBUILD_SHARED_LIBS=OFF ^
+            -DDAWN_BUILD_MONOLITHIC_LIBRARY=STATIC ^
+            -DDAWN_ENABLE_INSTALL=ON
+
+      - name: Build (monolithic STATIC)
+        shell: cmd
+        run: |
+          call "C:\Program Files\Microsoft Visual Studio\2022\Community\VC\Auxiliary\Build\vcvars64.bat"
+          cd dawn
+          cmake --build out\mono-static --parallel
+
+      - name: Install (monolithic STATIC)
+        shell: cmd
+        run: |
+          call "C:\Program Files\Microsoft Visual Studio\2022\Community\VC\Auxiliary\Build\vcvars64.bat"
+          cd dawn
+          cmake --install out\mono-static --prefix install\mono-static
+
+      - name: Zip installs
+        shell: pwsh
+        run: |
+          cd dawn
+          Compress-Archive -Path .\install\mono-shared -DestinationPath "..\dawn-windows-x64-mono-shared-$env:DAWN_TAG.zip" -Force
+          Compress-Archive -Path .\install\mono-static -DestinationPath "..\dawn-windows-x64-mono-static-$env:DAWN_TAG.zip" -Force
+          Get-FileHash "..\dawn-windows-x64-mono-*.zip" -Algorithm SHA256 |
+            ForEach-Object { "$($_.Hash)  $($_.Path)" } | Out-File -Encoding ascii "..\SHA256SUMS"
+
+      - name: Create Release and upload assets
+        uses: softprops/action-gh-release@v2
+        continue-on-error: true
+        with:
+          tag_name: dawn-${{ env.DAWN_TAG }}
+          target_commitish: ${{ github.sha }}
+          name: Dawn ${{ env.DAWN_TAG }} (Windows x64)
+          body: |
+            Automated build of upstream Dawn tag `${{ env.DAWN_TAG }}`.
+            Assets are raw CMake install trees for monolithic SHARED and STATIC.
+            DAWN_GIT.txt contains the exact commit. SHA256SUMS included.
+          files: |
+            dawn-nightly/dawn-windows-x64-mono-*.zip
+            dawn-nightly/SHA256SUMS
+            dawn-nightly/DAWN_GIT.txt
+          fail_on_unmatched_files: true
+          overwrite_files: false
