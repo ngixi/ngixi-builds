@@ -78,7 +78,7 @@ jobs:
           export PATH="/opt/depot_tools:/usr/local/go/bin:$PATH"
           export VPYTHON_BYPASS="manually managed python not supported by chrome operations"
           cd ${{github.workspace}}/dawn
-          gclient sync --no-history
+          gclient sync --no-history || (echo "gclient sync failed" && kill -9 -1 && exit 1)
 
       - name: Configure Dawn (CMake + Ninja)
         shell: bash
