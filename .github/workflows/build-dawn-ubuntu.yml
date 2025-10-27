@@ -9,6 +9,14 @@ on:
 jobs:
   build-linux:
     name: Build Dawn - Linux x64
+    runs-on: LIN-BUILD
     permissions:
       contents: write
-    uses: ./.github/workflows/buildDawnLinuxRelease.yml
+
+    container:
+      image: ubuntu:22.04
+      options: --user root
+
+    steps:
+      - name: Build Dawn Linux
+        uses: ./.github/actions/build-dawn-linux

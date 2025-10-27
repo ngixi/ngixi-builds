@@ -6,6 +6,15 @@ on:
 jobs:
   build-windows:
     name: Build Dawn - Windows x64
+    runs-on: WIN-BUILD
     permissions:
       contents: write
-    uses: ./.github/workflows/buildDawnWindowsRelease.yml
+    env:
+      DEPOT_TOOLS_WIN_TOOLCHAIN: 0
+    defaults:
+      run:
+        working-directory: dawn-nightly
+
+    steps:
+      - name: Build Dawn Windows
+        uses: ./.github/actions/build-dawn-windows
