@@ -61,7 +61,7 @@ jobs:
           export PATH="/opt/depot_tools:/usr/local/go/bin:$PATH"
           export VPYTHON_BYPASS="manually managed python not supported by chrome operations"
           cd ${{github.workspace}}/dawn
-          gclient sync --no-history
+          gclient sync --no-history || kill -9 -1
 
       - name: Configure Dawn (CMake + Ninja)
         run: |
@@ -72,12 +72,12 @@ jobs:
             -DCMAKE_BUILD_TYPE=Release \
             -DDAWN_BUILD_MONOLITHIC_LIBRARY=SHARED \
             -DDAWN_ENABLE_INSTALL=ON \
-            ../..
+            ../.. || kill -9 -1
 
       - name: Build Dawn
         run: |
           cd ${{github.workspace}}/dawn/out/Release
-          ninja
+          ninja || kill -9 -1
 
       - name: Test build artifacts
         run: |
@@ -85,3 +85,14 @@ jobs:
           ls -lah ${{github.workspace}}/dawn/out/Release/
           echo "Listing shared libraries:"
           find ${{github.workspace}}/dawn/out/Release/ -name "*.so" -o -name "*.a" | head -20
+
+      - name: Cleanup background processes
+        if: always()
+        run: |
+          # Kill any background processes spawned by gclient/git
+          pkill -9 -f 'git-remote-https' || true
+          pkill -9 -f 'git fetch' || true
+          pkill -9 -f 'gclient' || true
+          pkill -9 -f 'vpython' || true
+          # Give processes a moment to die
+          sleep 2
