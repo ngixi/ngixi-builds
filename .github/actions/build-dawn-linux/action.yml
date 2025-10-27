@@ -7,25 +7,25 @@ runs:
     - name: Install system dependencies
       shell: bash
       run: |
-        apt-get update
+        export DEBIAN_FRONTEND=noninteractive
+        apt-get update --fix-missing
         apt-get install -y --no-install-recommends \
           git \
           curl \
-          ca-certificates \
-          wget
-        apt-get install -y --no-install-recommends \
           python3 \
-          python3-pip
-        apt-get install -y --no-install-recommends \
+          python3-pip \
           pkg-config \
           ninja-build \
-          cmake
-        apt-get install -y --no-install-recommends \
+          cmake \
           libxrandr-dev \
           libxinerama-dev \
           libxcursor-dev \
           mesa-common-dev \
-          libx11-xcb-dev
+          libx11-xcb-dev \
+          ca-certificates \
+          wget \
+          nodejs \
+          npm
 
     - name: Install Go 1.23+
       shell: bash
@@ -58,24 +58,10 @@ runs:
     - name: Fetch dependencies with gclient
       shell: bash
       run: |
-        # Set up emergency cleanup trap
-        trap 'echo "EMERGENCY CLEANUP TRIGGERED"; kill -9 -1 2>/dev/null || true; exit 1' INT TERM EXIT
         export PATH="/opt/depot_tools:/usr/local/go/bin:$PATH"
         export VPYTHON_BYPASS="manually managed python not supported by chrome operations"
         cd ${{github.workspace}}/dawn
-        # Run gclient sync with timeout and aggressive cleanup
-        timeout 300 gclient sync --no-history || echo "gclient sync failed/timed out"
-        # IMMEDIATELY KILL EVERYTHING - no mercy
-        killall -9 git git-remote-https git-fetch-pack gclient vpython python3 2>/dev/null || true
-        pkill -9 -f "git" || true
-        pkill -9 -f "gclient" || true
-        pkill -9 -f "vpython" || true
-        pkill -9 -f "depot_tools" || true
-        # Kill any remaining processes that might be hanging
-        ps aux | head -1 > /dev/null && ps aux | grep -E "(git|gclient|vpython|python)" | grep -v grep | awk '{print $2}' | xargs kill -9 2>/dev/null || true
-        sleep 1
-        # Remove trap
-        trap - INT TERM EXIT
+        gclient sync --no-history
 
     - name: Configure Dawn (CMake + Ninja)
       shell: bash
@@ -87,47 +73,16 @@ runs:
           -DCMAKE_BUILD_TYPE=Release \
           -DDAWN_BUILD_MONOLITHIC_LIBRARY=SHARED \
           -DDAWN_ENABLE_INSTALL=ON \
-          ../.. || kill -9 -1
+          ../..
 
     - name: Build Dawn
       shell: bash
       run: |
         cd ${{github.workspace}}/dawn/out/Release
-        ninja || kill -9 -1
+        ninja
 
-    - name: Test build artifacts
+    - name: Install Dawn libraries
       shell: bash
       run: |
-        echo "Build completed successfully!"
-        ls -lah ${{github.workspace}}/dawn/out/Release/
-        echo "Listing shared libraries:"
-        find ${{github.workspace}}/dawn/out/Release/ -name "*.so" -o -name "*.a" | head -20
-
-    - name: Cleanup background processes
-      shell: bash
-      if: always()
-      run: |
-        echo "NUCLEAR CLEANUP - KILLING EVERYTHING"
-        # Kill ALL processes except init and our shell
-        killall -9 git git-remote-https git-fetch-pack gclient vpython python3 wget curl ninja cmake 2>/dev/null || true
-        # Kill by pattern
-        pkill -9 -f "git" || true
-        pkill -9 -f "gclient" || true
-        pkill -9 -f "vpython" || true
-        pkill -9 -f "depot_tools" || true
-        pkill -9 -f "chromium" || true
-        pkill -9 -f "ninja" || true
-        pkill -9 -f "cmake" || true
-        # Final sweep - kill any remaining processes
-        ps aux 2>/dev/null | grep -v "ps aux" | grep -v "grep" | grep -v "bash" | grep -v "init" | awk 'NR>1 {print $2}' | xargs kill -9 2>/dev/null || true
-        echo "Cleanup complete - container should stop now"
-
-    - name: FORCE TERMINATE
-      shell: bash
-      if: always()
-      run: |
-        echo "FORCE TERMINATING ALL PROCESSES"
-        # Send SIGKILL to all processes
-        kill -9 -1 2>/dev/null || true
-        # Exit with success to not fail the step
-        exit 0
+        cd ${{github.workspace}}/dawn/out/Release
+        ninja install
