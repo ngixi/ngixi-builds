@@ -18,5 +18,8 @@ jobs:
       options: --user root
 
     steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
       - name: Build Dawn Linux
         uses: ./.github/actions/build-dawn-linux

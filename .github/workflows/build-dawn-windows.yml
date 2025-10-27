@@ -16,5 +16,8 @@ jobs:
         working-directory: dawn-nightly
 
     steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
       - name: Build Dawn Windows
         uses: ./.github/actions/build-dawn-windows
