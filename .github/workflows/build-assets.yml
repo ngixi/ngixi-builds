@@ -75,7 +75,7 @@ jobs:
             NGIXI Assets v${{ vars.NGIXI_ASSET_VERSION }}
             Dawn: ${{ vars.DAWN_TAG }}
             Wasmtime: TODO
-            Zig Win32 Bindings: ${{ vars.ZIG_WIN32_TAG }}
+            Zig Win32 Bindings: ${{ vars.ZIGGEN_TAG }}
 
             Assets are a mix of various build outputs which ngixi knows how to consume (or will).
           files: |

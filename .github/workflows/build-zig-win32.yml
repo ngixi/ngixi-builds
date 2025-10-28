@@ -30,7 +30,7 @@ jobs:
         shell: pwsh
         run: |
           if (-not (Test-Path zigwin32gen)) {
-            git clone ${{ vars.ZIG_WIN32_REPO }} zigwin32gen
+            git clone ${{ vars.ZIGGEN_REPO }} zigwin32gen
           }
 
       - name: Configure Git for ZigWin32Gen
@@ -43,7 +43,7 @@ jobs:
         run: |
           cd zigwin32gen
           git fetch --tags --force --quiet
-          git checkout --quiet ${{ vars.ZIG_WIN32_TAG }}
+          git checkout --quiet ${{ vars.ZIGGEN_TAG }}
           git rev-parse --short HEAD | Out-File -Encoding ascii ..\ZIG_WIN32_GIT.txt
 
       - name: Build ZigWin32Gen
