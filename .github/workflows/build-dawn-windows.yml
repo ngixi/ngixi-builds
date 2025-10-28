@@ -158,6 +158,9 @@ jobs:
       - name: Prepare Dawn assets
         shell: pwsh
         run: |
+          if (Test-Path dawn-assets) {
+            Remove-Item -Recurse -Force dawn-assets
+          }
           New-Item -ItemType Directory -Path dawn-assets -Force
           Copy-Item -Recurse -Path dawn/install/* -Destination dawn-assets/
 
