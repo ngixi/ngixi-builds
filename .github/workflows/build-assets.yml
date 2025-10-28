@@ -30,38 +30,27 @@ jobs:
         uses: actions/download-artifact@v4
         with:
           name: dawn-windows-assets
-          path: dawn-assets
+          path: all_assets_windows/dawn
 
       - name: Download Wasmtime assets
         uses: actions/download-artifact@v4
+        continue-on-error: true
         with:
           name: wasmtime-windows-assets
-          path: wasmtime-assets
+          path: all_assets_windows/wasmtime
 
       - name: Download Zig bindings assets
         uses: actions/download-artifact@v4
+        continue-on-error: true
         with:
           name: zig-bindings-windows-assets
-          path: zig-bindings-assets
+          path: all_assets_windows/zig-bindings
 
-      - name: Assemble all assets
+      - name: Copy metadata files
         shell: bash
         run: |
-          mkdir -p all_assets_windows
-          if [ -d "dawn-assets" ]; then
-            mkdir -p all_assets_windows/dawn
-            cp -r dawn-assets/* all_assets_windows/dawn/
-            cp dawn-assets/DAWN_GIT.txt . 2>/dev/null || true
-            cp dawn-assets/DEPENDENTS.txt . 2>/dev/null || true
-          fi
-          if [ -d "wasmtime-assets" ] && [ "$(ls -A wasmtime-assets)" ]; then
-            mkdir -p all_assets_windows/wasmtime
-            cp -r wasmtime-assets/* all_assets_windows/wasmtime/
-          fi
-          if [ -d "zig-bindings-assets" ] && [ "$(ls -A zig-bindings-assets)" ]; then
-            mkdir -p all_assets_windows/zig-bindings
-            cp -r zig-bindings-assets/* all_assets_windows/zig-bindings/
-          fi
+          cp all_assets_windows/dawn/DAWN_GIT.txt . 2>/dev/null || true
+          cp all_assets_windows/dawn/DEPENDENTS.txt . 2>/dev/null || true
 
       - name: Zip assets
         shell: bash

@@ -17,8 +17,9 @@ jobs:
         run: |
           Write-Host "Wasmtime build stub - TODO: implement actual build"
           New-Item -ItemType Directory -Path wasmtime-assets -Force
+          # Create placeholder to ensure artifact uploads
+          "STUB: Wasmtime assets not yet implemented" | Out-File -Encoding utf8 wasmtime-assets/README.md
           # TODO: Add actual Wasmtime build steps here
-          # For now, create empty directory
 
       - name: Upload Wasmtime artifacts
         uses: actions/upload-artifact@v4

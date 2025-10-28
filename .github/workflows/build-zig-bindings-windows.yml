@@ -17,8 +17,9 @@ jobs:
         run: |
           Write-Host "Zig bindings build stub - TODO: implement actual build"
           New-Item -ItemType Directory -Path zig-bindings-assets -Force
+          # Create placeholder to ensure artifact uploads
+          "STUB: Zig bindings not yet implemented" | Out-File -Encoding utf8 zig-bindings-assets/README.md
           # TODO: Add actual Zig bindings generation steps here
-          # For now, create empty directory
 
       - name: Upload Zig bindings artifacts
         uses: actions/upload-artifact@v4
