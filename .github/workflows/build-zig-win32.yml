@@ -65,6 +65,19 @@ jobs:
           # Add version info
           Copy-Item ZIG_WIN32_GIT.txt zig-win32-bindings-assets\
 
+      - name: Delete existing Zig Win32 release (if exists)
+        shell: pwsh
+        run: |
+          $tag = "zig-win32-$($env:ZIGGEN_TAG)"
+          try {
+            gh release delete $tag -y --cleanup-tag
+            Write-Host "Deleted existing release: $tag"
+          } catch {
+            Write-Host "No existing release to delete: $tag"
+          }
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
       - name: Create Zig Win32 Release
         uses: softprops/action-gh-release@v2
         with:
