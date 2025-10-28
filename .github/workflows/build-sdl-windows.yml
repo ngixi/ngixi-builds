@@ -1,0 +1,92 @@
+name: Build SDL Windows
+
+on:
+  push:
+    branches:
+      - main
+  workflow_dispatch:
+  workflow_call:
+
+jobs:
+  setup:
+    runs-on: WIN-BUILD
+    steps:
+      - name: Checkout ngixi-builds repo
+        uses: actions/checkout@v4
+        with:
+          clean: false
+
+      - uses: ./.github/actions/setup-windows-build
+        with:
+          build-dir: sdl-build
+
+  build-windows:
+    runs-on: WIN-BUILD
+    needs: setup
+    defaults:
+      run:
+        working-directory: sdl-build
+
+    steps:
+      - name: Clone SDL
+        shell: pwsh
+        run: |
+          if (-not (Test-Path sdl)) {
+            git clone ${{ vars.SDL_REPO }} sdl
+          }
+
+      - name: Checkout tag
+        shell: pwsh
+        run: |
+          cd sdl
+          git fetch --tags --force --quiet
+          git checkout --quiet ${{ vars.SDL_TAG }}
+          git rev-parse --short HEAD | Out-File -Encoding ascii ..\SDL_GIT.txt
+
+      - name: Configure SDL
+        shell: cmd
+        run: |
+          call "C:\Program Files\Microsoft Visual Studio\2022\Community\VC\Auxiliary\Build\vcvars64.bat"
+          cd sdl
+          cmake -S . -B build -G Ninja ^
+            -DCMAKE_BUILD_TYPE=Release ^
+            -DCMAKE_C_COMPILER=cl ^
+            -DCMAKE_CXX_COMPILER=cl ^
+            -DCMAKE_SYSTEM_VERSION=10.0 ^
+            -DCMAKE_MSVC_RUNTIME_LIBRARY=MultiThreadedDLL ^
+            -DSDL_SHARED=ON ^
+            -DSDL_STATIC=ON ^
+            -DSDL_TEST_LIBRARY=ON ^
+            -DSDL_EXAMPLES=ON ^
+            -DSDL_TESTS=ON
+
+      - name: Build SDL
+        shell: cmd
+        run: |
+          call "C:\Program Files\Microsoft Visual Studio\2022\Community\VC\Auxiliary\Build\vcvars64.bat"
+          cd sdl
+          cmake --build build --parallel
+
+      - name: Install SDL
+        shell: cmd
+        run: |
+          call "C:\Program Files\Microsoft Visual Studio\2022\Community\VC\Auxiliary\Build\vcvars64.bat"
+          cd sdl
+          cmake --install build --prefix install
+
+      - name: Prepare SDL assets
+        shell: pwsh
+        run: |
+          if (Test-Path sdl-assets) {
+            Remove-Item -Recurse -Force sdl-assets
+          }
+          New-Item -ItemType Directory -Path sdl-assets -Force
+          Copy-Item -Recurse -Path sdl/install/* -Destination sdl-assets/
+
+      - name: Upload SDL artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: sdl-windows-assets
+          path: |
+            sdl-build/sdl-assets/
+            sdl-build/SDL_GIT.txt

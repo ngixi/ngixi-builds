@@ -13,8 +13,8 @@ These variables are defined at the organization level (ngixi) and are accessible
 | `NGIXI_ASSET_VERSION` | `0.0.1` | Version number for NGIXI asset releases |
 | `WASMTIME_REPO` | `https://github.com/bytecodealliance/wasmtime` | Repository URL for Wasmtime WebAssembly runtime |
 | `WASMTIME_TAG` | `v38.0.3` | Tag/version to checkout for Wasmtime builds |
-| `ZIGGEN_REPO` | `https://github.com/ngixi/ngixi-zigwin32gen` | Repository URL for NGIXI Zig Windows API generator |
-| `ZIGGEN_TAG` | `1.0.1` | Tag/version to checkout for Ziggen builds |
+| `SDL_REPO` | `https://github.com/libsdl-org/SDL` | Repository URL for Simple DirectMedia Layer |
+| `SDL_TAG` | `release-3.2.4` | Tag/version to checkout for SDL builds |
 
 ## Usage in Workflows
 

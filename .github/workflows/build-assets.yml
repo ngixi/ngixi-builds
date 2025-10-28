@@ -1,20 +1,11 @@
 name: Build Assets
 
 on:
-  push:
-    branches:
-      - main
   workflow_dispatch:
 
 jobs:
-  build-zig-win32-bindings:
-    uses: ./.github/workflows/build-zig-win32.yml
-    permissions:
-      contents: write
-
   build-wasmtime:
     uses: ./.github/workflows/build-wasmtime-windows.yml
-    needs: build-zig-win32-bindings
 
   build-dawn:
     uses: ./.github/workflows/build-dawn-windows.yml
