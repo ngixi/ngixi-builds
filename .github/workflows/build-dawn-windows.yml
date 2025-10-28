@@ -159,15 +159,18 @@ jobs:
           cd dawn
           cmake --install out\mono-static --prefix install\mono-static
 
+      - name: Copy assets to all_assets_windows
+        shell: pwsh
+        run: |
+          New-Item -ItemType Directory -Path all_assets_windows -Force
+          Copy-Item -Recurse -Path dawn/install/* -Destination all_assets_windows/
+
       - name: Zip installs
         shell: pwsh
         run: |
-          cd dawn
-          Compress-Archive -Path .\install\mono-shared -DestinationPath "..\dawn-windows-x64-mono-shared-$env:DAWN_TAG.zip" -Force
-          Compress-Archive -Path .\install\mono-static -DestinationPath "..\dawn-windows-x64-mono-static-$env:DAWN_TAG.zip" -Force
-          if (Test-Path ..\DEPENDENTS.txt) { Copy-Item ..\DEPENDENTS.txt .\DEPENDENTS.txt }
-          Get-FileHash "..\dawn-windows-x64-mono-*.zip" -Algorithm SHA256 |
-            ForEach-Object { "$($_.Hash)  $($_.Path)" } | Out-File -Encoding ascii "..\SHA256SUMS"
+          Compress-Archive -Path all_assets_windows -DestinationPath all_assets_windows.zip -Force
+          Get-FileHash all_assets_windows.zip -Algorithm SHA256 |
+            ForEach-Object { "$($_.Hash)  $($_.Path)" } | Out-File -Encoding ascii SHA256SUMS
 
       - name: Create Release and upload assets
         uses: softprops/action-gh-release@v2
@@ -179,12 +182,11 @@ jobs:
           body: |
             NGIXI Assets v${{ env.NGIXI_ASSET_VERSION }}
             Built from Dawn tag `${{ env.DAWN_TAG }}`.
-            Assets are raw CMake install trees for monolithic SHARED and STATIC.
+            Assets are raw CMake install trees for monolithic SHARED and STATIC in all_assets_windows.zip.
             DAWN_GIT.txt contains the exact commit. SHA256SUMS included.
             DEPENDENTS.txt lists external DLLs required by webgpu_dawn.dll.
           files: |
-            dawn-windows-x64-mono-shared-*.zip
-            dawn-windows-x64-mono-static-*.zip
+            all_assets_windows.zip
             SHA256SUMS
             DAWN_GIT.txt
             DEPENDENTS.txt
