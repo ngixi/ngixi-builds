@@ -1,0 +1,27 @@
+name: Build Wasmtime Windows
+
+on:
+  workflow_dispatch:
+  workflow_call:
+
+jobs:
+  build-windows:
+    runs-on: WIN-BUILD
+
+    steps:
+      - name: Checkout ngixi-builds repo
+        uses: actions/checkout@v4
+
+      - name: Stub Wasmtime build
+        shell: pwsh
+        run: |
+          Write-Host "Wasmtime build stub - TODO: implement actual build"
+          New-Item -ItemType Directory -Path wasmtime-assets -Force
+          # TODO: Add actual Wasmtime build steps here
+          # For now, create empty directory
+
+      - name: Upload Wasmtime artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: wasmtime-windows-assets
+          path: wasmtime-assets/

@@ -1,10 +1,8 @@
-name: Build Windows Assets
+name: Build Dawn Windows
 
 on:
-  push:
-    branches:
-      - main
   workflow_dispatch:
+  workflow_call:
 
 jobs:
   build-windows:
@@ -147,39 +145,17 @@ jobs:
           cd dawn
           cmake --install out\mono-static --prefix install\mono-static
 
-      - name: Copy assets to all_assets_windows
+      - name: Prepare Dawn assets
         shell: pwsh
         run: |
-          New-Item -ItemType Directory -Path all_assets_windows/dawn -Force
-          Remove-Item all_assets_windows/dawn/* -Recurse -Force -ErrorAction SilentlyContinue
-          Copy-Item -Recurse -Path dawn/install/* -Destination all_assets_windows/dawn/
+          New-Item -ItemType Directory -Path dawn-assets -Force
+          Copy-Item -Recurse -Path dawn/install/* -Destination dawn-assets/
 
-      - name: Zip installs
-        shell: pwsh
-        run: |
-          cd all_assets_windows
-          Compress-Archive -Path * -DestinationPath ..\all_assets_windows.zip -Force
-          cd ..
-          Get-FileHash all_assets_windows.zip -Algorithm SHA256 |
-            ForEach-Object { "$($_.Hash)  $($_.Path)" } | Out-File -Encoding ascii SHA256SUMS
-
-      - name: Create Release and upload assets
-        uses: softprops/action-gh-release@v2
-        continue-on-error: true
+      - name: Upload Dawn artifacts
+        uses: actions/upload-artifact@v4
         with:
-          tag_name: ngixi-assets-${{ vars.NGIXI_ASSET_VERSION }}
-          target_commitish: ${{ github.sha }}
-          name: NGIXI Assets ${{ vars.NGIXI_ASSET_VERSION }} (Dawn ${{ vars.DAWN_TAG }})
-          body: |
-            NGIXI Assets v${{ vars.NGIXI_ASSET_VERSION }}
-            Dawn: ${{ vars.DAWN_TAG }}
-            Wasmtime: TODO
-            FreeType: TODO
-
-            Assets are a mix of various build outputs which ngixi knows how to consume (or will).
-          files: |
-            all_assets_windows.zip
-            SHA256SUMS
+          name: dawn-windows-assets
+          path: |
+            dawn-assets/
             DAWN_GIT.txt
             DEPENDENTS.txt
-          fail_on_unmatched_files: true

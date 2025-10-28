@@ -1,0 +1,93 @@
+name: Build Assets
+
+on:
+  push:
+    branches:
+      - main
+  workflow_dispatch:
+
+jobs:
+  build-dawn:
+    uses: ./.github/workflows/build-dawn-windows.yml
+
+  build-wasmtime:
+    uses: ./.github/workflows/build-wasmtime-windows.yml
+
+  build-zig-bindings:
+    uses: ./.github/workflows/build-zig-bindings-windows.yml
+
+  assemble-and-release:
+    runs-on: ubuntu-latest
+    needs: [build-dawn, build-wasmtime, build-zig-bindings]
+    permissions:
+      contents: write
+
+    steps:
+      - name: Checkout ngixi-builds repo
+        uses: actions/checkout@v4
+
+      - name: Download Dawn assets
+        uses: actions/download-artifact@v4
+        with:
+          name: dawn-windows-assets
+          path: dawn-assets
+
+      - name: Download Wasmtime assets
+        uses: actions/download-artifact@v4
+        with:
+          name: wasmtime-windows-assets
+          path: wasmtime-assets
+
+      - name: Download Zig bindings assets
+        uses: actions/download-artifact@v4
+        with:
+          name: zig-bindings-windows-assets
+          path: zig-bindings-assets
+
+      - name: Assemble all assets
+        shell: bash
+        run: |
+          mkdir -p all_assets_windows
+          if [ -d "dawn-assets" ]; then
+            mkdir -p all_assets_windows/dawn
+            cp -r dawn-assets/* all_assets_windows/dawn/
+            cp dawn-assets/DAWN_GIT.txt . 2>/dev/null || true
+            cp dawn-assets/DEPENDENTS.txt . 2>/dev/null || true
+          fi
+          if [ -d "wasmtime-assets" ] && [ "$(ls -A wasmtime-assets)" ]; then
+            mkdir -p all_assets_windows/wasmtime
+            cp -r wasmtime-assets/* all_assets_windows/wasmtime/
+          fi
+          if [ -d "zig-bindings-assets" ] && [ "$(ls -A zig-bindings-assets)" ]; then
+            mkdir -p all_assets_windows/zig-bindings
+            cp -r zig-bindings-assets/* all_assets_windows/zig-bindings/
+          fi
+
+      - name: Zip assets
+        shell: bash
+        run: |
+          cd all_assets_windows
+          zip -r ../all_assets_windows.zip .
+          cd ..
+          sha256sum all_assets_windows.zip > SHA256SUMS
+
+      - name: Create Release and upload assets
+        uses: softprops/action-gh-release@v2
+        continue-on-error: true
+        with:
+          tag_name: ngixi-assets-${{ vars.NGIXI_ASSET_VERSION }}
+          target_commitish: ${{ github.sha }}
+          name: NGIXI Assets ${{ vars.NGIXI_ASSET_VERSION }} (Dawn ${{ vars.DAWN_TAG }})
+          body: |
+            NGIXI Assets v${{ vars.NGIXI_ASSET_VERSION }}
+            Dawn: ${{ vars.DAWN_TAG }}
+            Wasmtime: TODO
+            Zig Bindings: TODO
+
+            Assets are a mix of various build outputs which ngixi knows how to consume (or will).
+          files: |
+            all_assets_windows.zip
+            SHA256SUMS
+            DAWN_GIT.txt
+            DEPENDENTS.txt
+          fail_on_unmatched_files: true

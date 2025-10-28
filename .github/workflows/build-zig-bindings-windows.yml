@@ -1,0 +1,27 @@
+name: Build Zig Bindings Windows
+
+on:
+  workflow_dispatch:
+  workflow_call:
+
+jobs:
+  build-windows:
+    runs-on: WIN-BUILD
+
+    steps:
+      - name: Checkout ngixi-builds repo
+        uses: actions/checkout@v4
+
+      - name: Stub Zig bindings build
+        shell: pwsh
+        run: |
+          Write-Host "Zig bindings build stub - TODO: implement actual build"
+          New-Item -ItemType Directory -Path zig-bindings-assets -Force
+          # TODO: Add actual Zig bindings generation steps here
+          # For now, create empty directory
+
+      - name: Upload Zig bindings artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: zig-bindings-windows-assets
+          path: zig-bindings-assets/
