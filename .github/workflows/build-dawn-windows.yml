@@ -33,10 +33,19 @@ jobs:
           }
 
       - name: Checkout Dawn
+        shell: pwsh
         run: |
           if (-not (Test-Path dawn)) {
             git clone $env:DAWN_REPO dawn
           }
+
+      - name: Configure Git
+        shell: pwsh
+        run: |
+          git config --global user.email "build@ngixi.local"
+          git config --global user.name "NGIXI Build Bot"
+          git config --global --add safe.directory "$PWD\dawn"
+          git config --global depot-tools.allowGlobalGitConfig false
 
       - name: Checkout tag
         shell: pwsh
@@ -47,9 +56,10 @@ jobs:
           git rev-parse --short HEAD | Out-File -Encoding ascii ..\DAWN_GIT.txt
 
       - name: Fetch deps
+        shell: pwsh
         run: |
           cd dawn
-          cp scripts/standalone.gclient .gclient
+          Copy-Item scripts/standalone.gclient .gclient -Force
           gclient sync
 
       # Monolithic DLL => one webgpu_dawn.dll
@@ -63,10 +73,25 @@ jobs:
             -DCMAKE_C_COMPILER=cl ^
             -DCMAKE_CXX_COMPILER=cl ^
             -DCMAKE_CXX_FLAGS="/DNOMINMAX /DWIN32_LEAN_AND_MEAN" ^
-            -DCMAKE_SYSTEM_VERSION=10.0.26100.0 ^
+            -DCMAKE_SYSTEM_VERSION=10.0 ^
+            -DCMAKE_MSVC_RUNTIME_LIBRARY=MultiThreadedDLL ^
             -DBUILD_SHARED_LIBS=OFF ^
             -DDAWN_BUILD_MONOLITHIC_LIBRARY=SHARED ^
-            -DDAWN_ENABLE_INSTALL=ON
+            -DDAWN_ENABLE_INSTALL=ON ^
+            -DDAWN_BUILD_TESTS=OFF ^
+            -DDAWN_BUILD_SAMPLES=OFF ^
+            -DDAWN_BUILD_BENCHMARKS=OFF ^
+            -DDAWN_ENABLE_BACKEND_D3D12=ON ^
+            -DDAWN_ENABLE_BACKEND_VULKAN=ON ^
+            -DDAWN_ENABLE_BACKEND_OPENGL=OFF ^
+            -DDAWN_ENABLE_BACKEND_METAL=OFF ^
+            -DDAWN_ENABLE_BACKEND_NULL=OFF ^
+            -DTINT_BUILD_TESTS=OFF ^
+            -DTINT_BUILD_SAMPLES=OFF ^
+            -DTINT_BUILD_DOCS=OFF ^
+            -DTINT_ENABLE_DXC=ON ^
+            -DTINT_ENABLE_WGSL_READER=ON ^
+            -DTINT_ENABLE_SPV_READER=OFF
 
       - name: Build (monolithic SHARED)
         shell: cmd
@@ -82,6 +107,13 @@ jobs:
           cd dawn
           cmake --install out\mono-shared --prefix install\mono-shared
 
+      - name: Report DLL dependents (monolithic SHARED)
+        shell: cmd
+        run: |
+          call "C:\Program Files\Microsoft Visual Studio\2022\Community\VC\Auxiliary\Build\vcvars64.bat"
+          cd dawn\install\mono-shared\bin
+          if exist webgpu_dawn.dll dumpbin /dependents webgpu_dawn.dll > "..\..\..\..\DEPENDENTS.txt"
+
       # Monolithic static => one webgpu_dawn.lib
       - name: Configure (monolithic STATIC)
         shell: cmd
@@ -93,10 +125,25 @@ jobs:
             -DCMAKE_C_COMPILER=cl ^
             -DCMAKE_CXX_COMPILER=cl ^
             -DCMAKE_CXX_FLAGS="/DNOMINMAX /DWIN32_LEAN_AND_MEAN" ^
-            -DCMAKE_SYSTEM_VERSION=10.0.26100.0 ^
+            -DCMAKE_SYSTEM_VERSION=10.0 ^
+            -DCMAKE_MSVC_RUNTIME_LIBRARY=MultiThreadedDLL ^
             -DBUILD_SHARED_LIBS=OFF ^
             -DDAWN_BUILD_MONOLITHIC_LIBRARY=STATIC ^
-            -DDAWN_ENABLE_INSTALL=ON
+            -DDAWN_ENABLE_INSTALL=ON ^
+            -DDAWN_BUILD_TESTS=OFF ^
+            -DDAWN_BUILD_SAMPLES=OFF ^
+            -DDAWN_BUILD_BENCHMARKS=OFF ^
+            -DDAWN_ENABLE_BACKEND_D3D12=ON ^
+            -DDAWN_ENABLE_BACKEND_VULKAN=ON ^
+            -DDAWN_ENABLE_BACKEND_OPENGL=OFF ^
+            -DDAWN_ENABLE_BACKEND_METAL=OFF ^
+            -DDAWN_ENABLE_BACKEND_NULL=OFF ^
+            -DTINT_BUILD_TESTS=OFF ^
+            -DTINT_BUILD_SAMPLES=OFF ^
+            -DTINT_BUILD_DOCS=OFF ^
+            -DTINT_ENABLE_DXC=ON ^
+            -DTINT_ENABLE_WGSL_READER=ON ^
+            -DTINT_ENABLE_SPV_READER=OFF
 
       - name: Build (monolithic STATIC)
         shell: cmd
@@ -118,6 +165,7 @@ jobs:
           cd dawn
           Compress-Archive -Path .\install\mono-shared -DestinationPath "..\dawn-windows-x64-mono-shared-$env:DAWN_TAG.zip" -Force
           Compress-Archive -Path .\install\mono-static -DestinationPath "..\dawn-windows-x64-mono-static-$env:DAWN_TAG.zip" -Force
+          if (Test-Path ..\DEPENDENTS.txt) { Copy-Item ..\DEPENDENTS.txt .\DEPENDENTS.txt }
           Get-FileHash "..\dawn-windows-x64-mono-*.zip" -Algorithm SHA256 |
             ForEach-Object { "$($_.Hash)  $($_.Path)" } | Out-File -Encoding ascii "..\SHA256SUMS"
 
@@ -133,10 +181,11 @@ jobs:
             Built from Dawn tag `${{ env.DAWN_TAG }}`.
             Assets are raw CMake install trees for monolithic SHARED and STATIC.
             DAWN_GIT.txt contains the exact commit. SHA256SUMS included.
+            DEPENDENTS.txt lists external DLLs required by webgpu_dawn.dll.
           files: |
             dawn-windows-x64-mono-shared-*.zip
             dawn-windows-x64-mono-static-*.zip
             SHA256SUMS
             DAWN_GIT.txt
+            DEPENDENTS.txt
           fail_on_unmatched_files: true
-          overwrite_files: true
