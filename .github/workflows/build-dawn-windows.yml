@@ -181,10 +181,11 @@ jobs:
           name: NGIXI Assets ${{ env.NGIXI_ASSET_VERSION }} (Dawn ${{ env.DAWN_TAG }})
           body: |
             NGIXI Assets v${{ env.NGIXI_ASSET_VERSION }}
-            Built from Dawn tag `${{ env.DAWN_TAG }}`.
-            Assets are raw CMake install trees for monolithic SHARED and STATIC in all_assets_windows.zip.
-            DAWN_GIT.txt contains the exact commit. SHA256SUMS included.
-            DEPENDENTS.txt lists external DLLs required by webgpu_dawn.dll.
+            Dawn: ${{ env.DAWN_TAG }}
+            Wasmtime: TODO
+            FreeType: TODO
+
+            Assets are a mix of various build outputs which ngixi knows how to consume (or will).
           files: |
             all_assets_windows.zip
             SHA256SUMS
