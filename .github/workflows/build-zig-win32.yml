@@ -11,13 +11,13 @@ jobs:
       - name: Checkout ngixi-builds repo
         uses: actions/checkout@v4
         with:
-          clean: false
+          clean: false        
 
       - uses: ./.github/actions/setup-windows-build
         with:
           build-dir: zig-win32-build
 
-  build-windows:
+  build-zig:
     runs-on: WIN-BUILD
     needs: setup
     permissions:
@@ -25,22 +25,12 @@ jobs:
     defaults:
       run:
         working-directory: zig-win32-build
-    env:
-      DEPOT_TOOLS_WIN_TOOLCHAIN: 0
 
     steps:
-
       - name: Clone ZigWin32Gen
         shell: pwsh
         run: |
-          if (-not (Test-Path zigwin32gen)) {
-            git clone ${{ vars.ZIGGEN_REPO }} zigwin32gen
-          }
-
-      - name: Configure Git for ZigWin32Gen
-        shell: pwsh
-        run: |
-          git config --global --add safe.directory "$PWD\zigwin32gen"
+          git clone ${{ vars.ZIGGEN_REPO }} zigwin32gen
 
       - name: Checkout ZigWin32Gen tag
         shell: pwsh
@@ -56,48 +46,39 @@ jobs:
           cd zigwin32gen
           zig build
 
-      - name: Add version info to zig-out
+      - name: Setup Zig bindings repository
         shell: pwsh
         run: |
-          Copy-Item ZIG_WIN32_GIT.txt zigwin32gen\zig-out\
+          $repoName = "ngixi-zig-win32"
+          $repoPath = "../$repoName"
 
-      - name: Create Zig Win32 tar.gz archive
-        shell: pwsh
-        run: |
-          $version = "${{ vars.ZIGGEN_TAG }}"
-          $archiveName = "zig-win32-$version.tar.gz"
-          # Create tar.gz from zig-out directory contents
-          tar -czf $archiveName -C zigwin32gen/zig-out .
+          # Create directory for the separate repo
+          New-Item -ItemType Directory -Path $repoPath -Force
 
-      - name: Delete existing Zig Win32 release (if exists)
-        shell: pwsh
-        run: |
-          $tag = "zig-win32-${{ vars.ZIGGEN_TAG }}"
-          Write-Host "Attempting to delete existing release: $tag"
-          $result = gh release delete $tag -y --cleanup-tag 2>&1
-          $exitCode = $LASTEXITCODE
-          Write-Host "Deletion command output: $result"
-          Write-Host "Exit code: $exitCode"
+          # Initialize git repo
+          git -C $repoPath init
+          git -C $repoPath config user.name "ngixi-builds"
+          git -C $repoPath config user.email "builds@ngixi.com"
 
-          if ($exitCode -eq 0) {
-            Write-Host "Successfully deleted existing release: $tag"
-          } elseif ($exitCode -eq 1 -and $result -match "release not found") {
-            Write-Host "No existing release to delete: $tag"
-          } else {
-            Write-Host "ERROR: Failed to delete existing release: $tag (unexpected error)"
-            exit 1
-          }
-        env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          # Copy zig-out contents to the repo
+          Copy-Item -Recurse "zigwin32gen/zig-out/*" $repoPath/ -Force
+          Copy-Item "ZIG_WIN32_GIT.txt" $repoPath/
+
+          # Commit and tag
+          git -C $repoPath add .
+          $commitMsg = "Zig Win32 Bindings v${{ vars.ZIGGEN_TAG }}"
+          git -C $repoPath commit -m $commitMsg
+          git -C $repoPath tag "v${{ vars.ZIGGEN_TAG }}"
 
       - name: Create Zig Win32 Release
         uses: softprops/action-gh-release@v2
         with:
-          tag_name: zig-win32-${{ vars.ZIGGEN_TAG }}
-          target_commitish: ${{ github.sha }}
+          repository: ngixi/ngixi-zig-win32
+          tag_name: v${{ vars.ZIGGEN_TAG }}
+          target_commitish: v${{ vars.ZIGGEN_TAG }}
           name: Zig Win32 Bindings ${{ vars.ZIGGEN_TAG }}
           body: |
             Zig Windows API Bindings v${{ vars.ZIGGEN_TAG }}
             Generated from ${{ vars.ZIGGEN_REPO }}
           files: |
-            zig-win32-${{ vars.ZIGGEN_TAG }}.tar.gz
+            zigwin32gen/zig-out/**
