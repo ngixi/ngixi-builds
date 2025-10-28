@@ -58,6 +58,27 @@ jobs:
             exit 1
           }
 
+      - name: Delete existing Zig Win32 release (if exists)
+        shell: pwsh
+        run: |
+          $tag = "zig-win32-$($env:ZIGGEN_TAG)"
+          Write-Host "Attempting to delete existing release: $tag"
+          $result = gh release delete $tag -y --cleanup-tag 2>&1
+          $exitCode = $LASTEXITCODE
+          Write-Host "Deletion command output: $result"
+          Write-Host "Exit code: $exitCode"
+
+          if ($exitCode -eq 0) {
+            Write-Host "Successfully deleted existing release: $tag"
+          } elseif ($exitCode -eq 1 -and $result -match "release not found") {
+            Write-Host "No existing release to delete: $tag"
+          } else {
+            Write-Host "ERROR: Failed to delete existing release: $tag (unexpected error)"
+            exit 1
+          }
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
       - name: Create Zig Win32 Release
         uses: softprops/action-gh-release@v2
         with:
