@@ -8,15 +8,9 @@ jobs:
   setup:
     runs-on: WIN-BUILD
     steps:
-      - name: Checkout ngixi-builds repo
-        uses: actions/checkout@v4
-
-      - name: Create build directories
-        shell: pwsh
-        run: |
-          if (-not (Test-Path zig-win32-build)) {
-            New-Item -ItemType Directory -Path zig-win32-build
-          }
+      - uses: ./.github/actions/setup-windows-build
+        with:
+          build-dir: zig-win32-build
 
   build-windows:
     runs-on: WIN-BUILD
@@ -26,15 +20,6 @@ jobs:
         working-directory: zig-win32-build
 
     steps:
-      - name: Checkout ngixi-builds repo
-        uses: actions/checkout@v4
-
-      - name: Set up Zig win32 build directory
-        shell: pwsh
-        run: |
-          if (-not (Test-Path zig-win32-build)) {
-            New-Item -ItemType Directory -Path zig-win32-build
-          }
 
       - name: Stub Zig bindings build
         shell: pwsh

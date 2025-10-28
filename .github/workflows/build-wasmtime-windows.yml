@@ -8,15 +8,9 @@ jobs:
   setup:
     runs-on: WIN-BUILD
     steps:
-      - name: Checkout ngixi-builds repo
-        uses: actions/checkout@v4
-
-      - name: Create build directories
-        shell: pwsh
-        run: |
-          if (-not (Test-Path wasmtime-build)) {
-            New-Item -ItemType Directory -Path wasmtime-build
-          }
+      - uses: ./.github/actions/setup-windows-build
+        with:
+          build-dir: wasmtime-build
 
   build-windows:
     runs-on: WIN-BUILD
@@ -26,22 +20,6 @@ jobs:
         working-directory: wasmtime-build
 
     steps:
-      - name: Checkout ngixi-builds repo
-        uses: actions/checkout@v4
-
-      - name: Create build directories
-        shell: pwsh
-        run: |
-          if (-not (Test-Path wasmtime-build)) {
-            New-Item -ItemType Directory -Path wasmtime-build
-          }
-
-      - name: Set up Wasmtime build directory
-        shell: pwsh
-        run: |
-          if (-not (Test-Path wasmtime-build)) {
-            New-Item -ItemType Directory -Path wasmtime-build
-          }
 
       - name: Stub Wasmtime build
         shell: pwsh

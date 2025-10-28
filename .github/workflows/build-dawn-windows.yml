@@ -8,17 +8,9 @@ jobs:
   setup:
     runs-on: WIN-BUILD
     steps:
-      - name: Checkout ngixi-builds repo
-        uses: actions/checkout@v4
+      - uses: ./.github/actions/setup-windows-build
         with:
-          clean: false
-
-      - name: Create build directories
-        shell: pwsh
-        run: |
-          if (-not (Test-Path dawn-build)) {
-            New-Item -ItemType Directory -Path dawn-build
-          }
+          build-dir: dawn-build
 
   build-windows:
     runs-on: WIN-BUILD
@@ -30,17 +22,6 @@ jobs:
       DEPOT_TOOLS_WIN_TOOLCHAIN: 0
 
     steps:
-      - name: Checkout ngixi-builds repo
-        uses: actions/checkout@v4
-        with:
-          clean: false
-
-      - name: Set up Dawn build directory
-        shell: pwsh
-        run: |
-          if (-not (Test-Path dawn-build)) {
-            New-Item -ItemType Directory -Path dawn-build
-          }
 
       - name: Checkout Dawn
         shell: pwsh

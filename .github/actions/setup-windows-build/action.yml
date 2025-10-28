@@ -1,0 +1,22 @@
+name: 'Setup Windows Build'
+description: 'Checkout repo and create build directory for Windows builds'
+
+inputs:
+  build-dir:
+    description: 'Build directory name'
+    required: true
+
+runs:
+  using: 'composite'
+  steps:
+    - name: Checkout ngixi-builds repo
+      uses: actions/checkout@v4
+      with:
+        clean: false
+
+    - name: Create build directory
+      shell: pwsh
+      run: |
+        if (-not (Test-Path ${{ inputs.build-dir }})) {
+          New-Item -ItemType Directory -Path ${{ inputs.build-dir }}
+        }
