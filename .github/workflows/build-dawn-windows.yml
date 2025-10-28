@@ -1,6 +1,9 @@
 name: Build Dawn Windows & Release
 
 on:
+  push:
+    branches:
+      - main
   workflow_dispatch:
 
 jobs:
@@ -10,16 +13,12 @@ jobs:
       contents: write
     env:
       DEPOT_TOOLS_WIN_TOOLCHAIN: 0
-    defaults:
-      run:
-        working-directory: dawn-nightly
 
     steps:
       - name: Checkout ngixi-builds repo
         uses: actions/checkout@v4
         with:
           clean: false
-          path: dawn-nightly/ngixi-builds
 
       - name: Load build versions
         shell: pwsh
@@ -135,8 +134,9 @@ jobs:
             Assets are raw CMake install trees for monolithic SHARED and STATIC.
             DAWN_GIT.txt contains the exact commit. SHA256SUMS included.
           files: |
-            dawn-nightly/dawn-windows-x64-mono-*.zip
-            dawn-nightly/SHA256SUMS
-            dawn-nightly/DAWN_GIT.txt
+            dawn-windows-x64-mono-shared-*.zip
+            dawn-windows-x64-mono-static-*.zip
+            SHA256SUMS
+            DAWN_GIT.txt
           fail_on_unmatched_files: true
           overwrite_files: true
