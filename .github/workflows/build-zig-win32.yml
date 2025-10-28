@@ -11,7 +11,7 @@ jobs:
       - name: Checkout ngixi-builds repo
         uses: actions/checkout@v4
         with:
-          clean: false        
+          clean: false
 
       - uses: ./.github/actions/setup-windows-build
         with:
@@ -30,6 +30,10 @@ jobs:
       - name: Clone ZigWin32Gen
         shell: pwsh
         run: |
+          # Remove existing directory if it exists
+          if (Test-Path zigwin32gen) {
+            Remove-Item zigwin32gen -Recurse -Force
+          }
           git clone ${{ vars.ZIGGEN_REPO }} zigwin32gen
 
       - name: Checkout ZigWin32Gen tag
