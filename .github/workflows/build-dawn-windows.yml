@@ -162,9 +162,9 @@ jobs:
       - name: Copy assets to all_assets_windows
         shell: pwsh
         run: |
-          New-Item -ItemType Directory -Path all_assets_windows -Force
-          Remove-Item all_assets_windows/dawn -Recurse -Force -ErrorAction SilentlyContinue
-          Copy-Item -Recurse -Path dawn/install -Destination all_assets_windows/dawn
+          New-Item -ItemType Directory -Path all_assets_windows/dawn -Force
+          Remove-Item all_assets_windows/dawn/* -Recurse -Force -ErrorAction SilentlyContinue
+          Copy-Item -Recurse -Path dawn/install/* -Destination all_assets_windows/dawn/
 
       - name: Zip installs
         shell: pwsh
