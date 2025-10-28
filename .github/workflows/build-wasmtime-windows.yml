@@ -5,8 +5,22 @@ on:
   workflow_call:
 
 jobs:
+  setup:
+    runs-on: WIN-BUILD
+    steps:
+      - name: Checkout ngixi-builds repo
+        uses: actions/checkout@v4
+
+      - name: Create build directories
+        shell: pwsh
+        run: |
+          if (-not (Test-Path wasmtime-build)) {
+            New-Item -ItemType Directory -Path wasmtime-build
+          }
+
   build-windows:
     runs-on: WIN-BUILD
+    needs: setup
     defaults:
       run:
         working-directory: wasmtime-build
@@ -14,6 +28,13 @@ jobs:
     steps:
       - name: Checkout ngixi-builds repo
         uses: actions/checkout@v4
+
+      - name: Create build directories
+        shell: pwsh
+        run: |
+          if (-not (Test-Path wasmtime-build)) {
+            New-Item -ItemType Directory -Path wasmtime-build
+          }
 
       - name: Set up Wasmtime build directory
         shell: pwsh

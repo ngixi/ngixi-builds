@@ -5,8 +5,22 @@ on:
   workflow_call:
 
 jobs:
+  setup:
+    runs-on: WIN-BUILD
+    steps:
+      - name: Checkout ngixi-builds repo
+        uses: actions/checkout@v4
+
+      - name: Create build directories
+        shell: pwsh
+        run: |
+          if (-not (Test-Path zig-win32-build)) {
+            New-Item -ItemType Directory -Path zig-win32-build
+          }
+
   build-windows:
     runs-on: WIN-BUILD
+    needs: setup
     defaults:
       run:
         working-directory: zig-win32-build
