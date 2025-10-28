@@ -1,5 +1,5 @@
 name: 'Setup Windows Build'
-description: 'Checkout repo and create build directory for Windows builds'
+description: 'Create build directory for Windows builds'
 
 inputs:
   build-dir:
@@ -9,11 +9,6 @@ inputs:
 runs:
   using: 'composite'
   steps:
-    - name: Checkout ngixi-builds repo
-      uses: actions/checkout@v4
-      with:
-        clean: false
-
     - name: Create build directory
       shell: pwsh
       run: |
