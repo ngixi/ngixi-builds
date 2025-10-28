@@ -73,11 +73,20 @@ jobs:
         shell: pwsh
         run: |
           $tag = "zig-win32-$($env:ZIGGEN_TAG)"
+          Write-Host "Attempting to delete existing release: $tag"
           try {
-            gh release delete $tag -y --cleanup-tag
-            Write-Host "Deleted existing release: $tag"
+            $result = gh release delete $tag -y --cleanup-tag 2>&1
+            Write-Host "Deletion command output: $result"
+            if ($LASTEXITCODE -eq 0) {
+              Write-Host "Successfully deleted existing release: $tag"
+            } else {
+              Write-Host "ERROR: Failed to delete existing release: $tag (exit code: $LASTEXITCODE)"
+              exit 1
+            }
           } catch {
-            Write-Host "No existing release to delete: $tag"
+            Write-Host "ERROR: Exception during deletion: $($_.Exception.Message)"
+            Write-Host "Failed to delete existing release: $tag"
+            exit 1
           }
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
