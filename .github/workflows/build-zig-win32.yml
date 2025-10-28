@@ -58,35 +58,36 @@ jobs:
             exit 1
           }
 
-      - name: Delete existing Zig Win32 release (if exists)
+      - name: Create Zig release commit
         shell: pwsh
         run: |
-          $tag = "zig-win32-$($env:ZIGGEN_TAG)"
-          Write-Host "Attempting to delete existing release: $tag"
-          $result = gh release delete $tag -y --cleanup-tag 2>&1
-          $exitCode = $LASTEXITCODE
-          Write-Host "Deletion command output: $result"
-          Write-Host "Exit code: $exitCode"
-
-          if ($exitCode -eq 0) {
-            Write-Host "Successfully deleted existing release: $tag"
-          } elseif ($exitCode -eq 1 -and $result -match "release not found") {
-            Write-Host "No existing release to delete: $tag"
-          } else {
-            Write-Host "ERROR: Failed to delete existing release: $tag (unexpected error)"
-            exit 1
-          }
-        env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          # Create a new orphan branch for this release
+          $releaseBranch = "zig-artifacts"
+          git checkout --orphan $releaseBranch
+          
+          # Clear everything
+          git rm -rf . 2>/dev/null || true
+          
+          # Add zig-out contents
+          Copy-Item -Recurse "zigwin32gen/zig-out/*" . -Force
+          Copy-Item "zigwin32gen/zig-out/ZIG_WIN32_GIT.txt" .
+          
+          # Commit and tag
+          git add .
+          $commitMsg = "Zig Win32 Bindings v${{ vars.ZIGGEN_TAG }}"
+          git commit -m $commitMsg
+          git tag "zig-win32-${{ vars.ZIGGEN_TAG }}"
+          
+          # Push tag only (not the branch)
+          git push origin "zig-win32-${{ vars.ZIGGEN_TAG }}"
 
       - name: Create Zig Win32 Release
         uses: softprops/action-gh-release@v2
         with:
           tag_name: zig-win32-${{ vars.ZIGGEN_TAG }}
-          target_commitish: ${{ github.sha }}
           name: Zig Win32 Bindings ${{ vars.ZIGGEN_TAG }}
           body: |
             Zig Windows API Bindings v${{ vars.ZIGGEN_TAG }}
             Generated from ${{ vars.ZIGGEN_REPO }}
-          files: |
-            zig-win32-build/zigwin32gen/zig-out/**
+
+            Download the source code archive to get the Zig binding files.
