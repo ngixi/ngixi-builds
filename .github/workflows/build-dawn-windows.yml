@@ -7,8 +7,6 @@ on:
 jobs:
   build-windows:
     runs-on: WIN-BUILD
-    permissions:
-      contents: write
     env:
       DEPOT_TOOLS_WIN_TOOLCHAIN: 0
 
