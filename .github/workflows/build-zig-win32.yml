@@ -20,9 +20,13 @@ jobs:
   build-windows:
     runs-on: WIN-BUILD
     needs: setup
+    permissions:
+      contents: write
     defaults:
       run:
         working-directory: zig-win32-build
+    env:
+      DEPOT_TOOLS_WIN_TOOLCHAIN: 0
 
     steps:
 
@@ -52,24 +56,23 @@ jobs:
           cd zigwin32gen
           zig build
 
-      - name: Generate Zig Win32 bindings
-        shell: pwsh
-        run: |
-          cd zigwin32gen
-          # Generate all Windows API bindings
-          .\zig-out\bin\zigwin32gen.exe > ..\zig-win32-bindings.zig
-
       - name: Prepare Zig Win32 bindings assets
         shell: pwsh
         run: |
           New-Item -ItemType Directory -Path zig-win32-bindings-assets -Force
-          # Copy the generated bindings
-          Copy-Item zig-win32-bindings.zig zig-win32-bindings-assets/
+          # Copy the generated bindings from zig-out
+          Copy-Item -Recurse zigwin32gen\zig-out\* zig-win32-bindings-assets\
           # Add version info
-          Copy-Item ZIG_WIN32_GIT.txt zig-win32-bindings-assets/
+          Copy-Item ZIG_WIN32_GIT.txt zig-win32-bindings-assets\
 
-      - name: Upload Zig bindings artifacts
-        uses: actions/upload-artifact@v4
+      - name: Create Zig Win32 Release
+        uses: softprops/action-gh-release@v2
         with:
-          name: zig-win32-bindings-windows-assets
-          path: zig-win32-build/zig-win32-bindings-assets/
+          tag_name: zig-win32-${{ vars.ZIGGEN_TAG }}
+          target_commitish: ${{ github.sha }}
+          name: Zig Win32 Bindings ${{ vars.ZIGGEN_TAG }}
+          body: |
+            Zig Windows API Bindings v${{ vars.ZIGGEN_TAG }}
+            Generated from ${{ vars.ZIGGEN_REPO }}
+          files: |
+            zig-win32-build/zig-win32-bindings-assets/**
