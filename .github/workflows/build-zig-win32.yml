@@ -49,6 +49,14 @@ jobs:
         run: |
           cd zigwin32gen
           zig build
+          # Verify build output
+          if (Test-Path "zig-out") {
+            Write-Host "Build successful - zig-out directory exists"
+            Get-ChildItem "zig-out" -Name | Select-Object -First 5
+          } else {
+            Write-Host "ERROR: Build failed - zig-out directory not found"
+            exit 1
+          }
 
       - name: Create Zig Win32 Release
         uses: softprops/action-gh-release@v2
@@ -60,4 +68,4 @@ jobs:
             Zig Windows API Bindings v${{ vars.ZIGGEN_TAG }}
             Generated from ${{ vars.ZIGGEN_REPO }}
           files: |
-            zigwin32gen/zig-out/**
+            zig-win32-build/zigwin32gen/zig-out/**
