@@ -26,14 +26,47 @@ jobs:
 
     steps:
 
-      - name: Stub Zig bindings build
+      - name: Clone ZigWin32Gen
         shell: pwsh
         run: |
-          Write-Host "Zig Win32 bindings build stub - TODO: implement actual build"
+          if (-not (Test-Path zigwin32gen)) {
+            git clone ${{ vars.ZIG_WIN32_REPO }} zigwin32gen
+          }
+
+      - name: Configure Git for ZigWin32Gen
+        shell: pwsh
+        run: |
+          git config --global --add safe.directory "$PWD\zigwin32gen"
+
+      - name: Checkout ZigWin32Gen tag
+        shell: pwsh
+        run: |
+          cd zigwin32gen
+          git fetch --tags --force --quiet
+          git checkout --quiet ${{ vars.ZIG_WIN32_TAG }}
+          git rev-parse --short HEAD | Out-File -Encoding ascii ..\ZIG_WIN32_GIT.txt
+
+      - name: Build ZigWin32Gen
+        shell: pwsh
+        run: |
+          cd zigwin32gen
+          zig build
+
+      - name: Generate Zig Win32 bindings
+        shell: pwsh
+        run: |
+          cd zigwin32gen
+          # Generate all Windows API bindings
+          .\zig-out\bin\zigwin32gen.exe > ..\zig-win32-bindings.zig
+
+      - name: Prepare Zig Win32 bindings assets
+        shell: pwsh
+        run: |
           New-Item -ItemType Directory -Path zig-win32-bindings-assets -Force
-          # Create placeholder to ensure artifact uploads
-          "STUB: Zig Win32 bindings not yet implemented" | Out-File -Encoding utf8 zig-win32-bindings-assets/README.md
-          # TODO: Add actual Zig Win32 bindings generation steps here
+          # Copy the generated bindings
+          Copy-Item zig-win32-bindings.zig zig-win32-bindings-assets/
+          # Add version info
+          Copy-Item ZIG_WIN32_GIT.txt zig-win32-bindings-assets/
 
       - name: Upload Zig bindings artifacts
         uses: actions/upload-artifact@v4
