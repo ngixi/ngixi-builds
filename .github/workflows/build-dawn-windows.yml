@@ -169,7 +169,7 @@ jobs:
       - name: Zip installs
         shell: pwsh
         run: |
-          Compress-Archive -Path all_assets_windows -DestinationPath all_assets_windows.zip -Force
+          Compress-Archive -Path all_assets_windows/* -DestinationPath all_assets_windows.zip -Force
           Get-FileHash all_assets_windows.zip -Algorithm SHA256 |
             ForEach-Object { "$($_.Hash)  $($_.Path)" } | Out-File -Encoding ascii SHA256SUMS
 
