@@ -64,7 +64,7 @@ jobs:
       - name: Create Zig Win32 tar.gz archive
         shell: pwsh
         run: |
-          $version = $env:ZIGGEN_TAG
+          $version = "${{ vars.ZIGGEN_TAG }}"
           $archiveName = "zig-win32-$version.tar.gz"
           # Create tar.gz from zig-out directory contents
           tar -czf $archiveName -C zigwin32gen/zig-out .
@@ -72,20 +72,19 @@ jobs:
       - name: Delete existing Zig Win32 release (if exists)
         shell: pwsh
         run: |
-          $tag = "zig-win32-$($env:ZIGGEN_TAG)"
+          $tag = "zig-win32-${{ vars.ZIGGEN_TAG }}"
           Write-Host "Attempting to delete existing release: $tag"
-          try {
-            $result = gh release delete $tag -y --cleanup-tag 2>&1
-            Write-Host "Deletion command output: $result"
-            if ($LASTEXITCODE -eq 0) {
-              Write-Host "Successfully deleted existing release: $tag"
-            } else {
-              Write-Host "ERROR: Failed to delete existing release: $tag (exit code: $LASTEXITCODE)"
-              exit 1
-            }
-          } catch {
-            Write-Host "ERROR: Exception during deletion: $($_.Exception.Message)"
-            Write-Host "Failed to delete existing release: $tag"
+          $result = gh release delete $tag -y --cleanup-tag 2>&1
+          $exitCode = $LASTEXITCODE
+          Write-Host "Deletion command output: $result"
+          Write-Host "Exit code: $exitCode"
+
+          if ($exitCode -eq 0) {
+            Write-Host "Successfully deleted existing release: $tag"
+          } elseif ($exitCode -eq 1 -and $result -match "release not found") {
+            Write-Host "No existing release to delete: $tag"
+          } else {
+            Write-Host "ERROR: Failed to delete existing release: $tag (unexpected error)"
             exit 1
           }
         env:
