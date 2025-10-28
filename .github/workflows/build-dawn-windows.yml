@@ -163,7 +163,8 @@ jobs:
         shell: pwsh
         run: |
           New-Item -ItemType Directory -Path all_assets_windows -Force
-          Copy-Item -Recurse -Path dawn/install/* -Destination all_assets_windows/
+          Remove-Item all_assets_windows/dawn -Recurse -Force -ErrorAction SilentlyContinue
+          Copy-Item -Recurse -Path dawn/install -Destination all_assets_windows/dawn
 
       - name: Zip installs
         shell: pwsh
