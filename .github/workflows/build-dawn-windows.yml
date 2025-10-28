@@ -169,6 +169,6 @@ jobs:
         with:
           name: dawn-windows-assets
           path: |
-            dawn-assets/
-            DAWN_GIT.txt
-            DEPENDENTS.txt
+            dawn-build/dawn-assets/
+            dawn-build/DAWN_GIT.txt
+            dawn-build/DEPENDENTS.txt
