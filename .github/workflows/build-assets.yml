@@ -7,24 +7,28 @@ on:
   workflow_dispatch:
 
 jobs:
-  build-dawn:
-    uses: ./.github/workflows/build-dawn-windows.yml
-
   build-wasmtime:
     uses: ./.github/workflows/build-wasmtime-windows.yml
 
   build-zig-win32-bindings:
     uses: ./.github/workflows/build-zig-win32.yml
+    needs: build-wasmtime
+
+  build-dawn:
+    uses: ./.github/workflows/build-dawn-windows.yml
+    needs: build-zig-win32-bindings
 
   assemble-and-release:
     runs-on: ubuntu-latest
-    needs: [build-dawn, build-wasmtime, build-zig-win32-bindings]
+    needs: build-dawn
     permissions:
       contents: write
 
     steps:
       - name: Checkout ngixi-builds repo
         uses: actions/checkout@v4
+        with:
+          clean: false        
 
       - name: Download Dawn assets
         uses: actions/download-artifact@v4
