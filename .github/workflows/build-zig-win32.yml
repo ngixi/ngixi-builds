@@ -61,6 +61,14 @@ jobs:
         run: |
           Copy-Item ZIG_WIN32_GIT.txt zigwin32gen\zig-out\
 
+      - name: Create Zig Win32 tar.gz archive
+        shell: pwsh
+        run: |
+          $version = $env:ZIGGEN_TAG
+          $archiveName = "zig-win32-$version.tar.gz"
+          # Create tar.gz from zig-out directory contents
+          tar -czf $archiveName -C zigwin32gen/zig-out .
+
       - name: Delete existing Zig Win32 release (if exists)
         shell: pwsh
         run: |
@@ -84,4 +92,4 @@ jobs:
             Zig Windows API Bindings v${{ vars.ZIGGEN_TAG }}
             Generated from ${{ vars.ZIGGEN_REPO }}
           files: |
-            zigwin32gen/zig-out/**
+            zig-win32-${{ vars.ZIGGEN_TAG }}.tar.gz
