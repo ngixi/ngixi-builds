@@ -1,0 +1,38 @@
+name: Build Zig Win32 Bindings
+
+on:
+  workflow_dispatch:
+  workflow_call:
+
+jobs:
+  build-windows:
+    runs-on: WIN-BUILD
+    defaults:
+      run:
+        working-directory: zig-win32-build
+
+    steps:
+      - name: Checkout ngixi-builds repo
+        uses: actions/checkout@v4
+
+      - name: Set up Zig win32 build directory
+        shell: pwsh
+        run: |
+          if (-not (Test-Path zig-win32-build)) {
+            New-Item -ItemType Directory -Path zig-win32-build
+          }
+
+      - name: Stub Zig bindings build
+        shell: pwsh
+        run: |
+          Write-Host "Zig Win32 bindings build stub - TODO: implement actual build"
+          New-Item -ItemType Directory -Path zig-win32-bindings-assets -Force
+          # Create placeholder to ensure artifact uploads
+          "STUB: Zig Win32 bindings not yet implemented" | Out-File -Encoding utf8 zig-win32-bindings-assets/README.md
+          # TODO: Add actual Zig Win32 bindings generation steps here
+
+      - name: Upload Zig bindings artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: zig-win32-bindings-windows-assets
+          path: zig-win32-build/zig-win32-bindings-assets/

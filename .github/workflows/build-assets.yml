@@ -13,12 +13,12 @@ jobs:
   build-wasmtime:
     uses: ./.github/workflows/build-wasmtime-windows.yml
 
-  build-zig-bindings:
-    uses: ./.github/workflows/build-zig-bindings-windows.yml
+  build-zig-win32-bindings:
+    uses: ./.github/workflows/build-zig-win32.yml
 
   assemble-and-release:
     runs-on: ubuntu-latest
-    needs: [build-dawn, build-wasmtime, build-zig-bindings]
+    needs: [build-dawn, build-wasmtime, build-zig-win32-bindings]
     permissions:
       contents: write
 
@@ -39,12 +39,12 @@ jobs:
           name: wasmtime-windows-assets
           path: all_assets_windows/wasmtime
 
-      - name: Download Zig bindings assets
+      - name: Download Zig Win32 bindings assets
         uses: actions/download-artifact@v4
         continue-on-error: true
         with:
-          name: zig-bindings-windows-assets
-          path: all_assets_windows/zig-bindings
+          name: zig-win32-bindings-windows-assets
+          path: all_assets_windows/zig-win32-bindings
 
       - name: Copy metadata files
         shell: bash
@@ -71,7 +71,7 @@ jobs:
             NGIXI Assets v${{ vars.NGIXI_ASSET_VERSION }}
             Dawn: ${{ vars.DAWN_TAG }}
             Wasmtime: TODO
-            Zig Bindings: TODO
+            Zig Win32 Bindings: TODO
 
             Assets are a mix of various build outputs which ngixi knows how to consume (or will).
           files: |
