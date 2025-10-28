@@ -58,7 +58,9 @@ jobs:
             -DSDL_STATIC=ON ^
             -DSDL_TEST_LIBRARY=ON ^
             -DSDL_EXAMPLES=ON ^
-            -DSDL_TESTS=ON
+            -DSDL_TESTS=ON ^
+            -DSDL_INSTALL_EXAMPLES=ON ^
+            -DSDL_INSTALL_TESTS=ON
 
       - name: Build SDL
         shell: cmd
