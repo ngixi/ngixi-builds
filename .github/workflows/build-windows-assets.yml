@@ -1,4 +1,4 @@
-name: Build Dawn Windows & Release
+name: Build Windows Assets
 
 on:
   push:
@@ -20,23 +20,11 @@ jobs:
         with:
           clean: false
 
-      - name: Load build versions
-        shell: pwsh
-        run: |
-          Get-Content .github/workflows/build-versions.env | ForEach-Object {
-            if ($_ -match '^([^=]+)=(.*)$') {
-              $key = $matches[1].ToUpper()
-              $value = $matches[2]
-              Write-Host "Setting $key=$value"
-              "$key=$value" | Out-File -Encoding utf8 -Append $env:GITHUB_ENV
-            }
-          }
-
       - name: Checkout Dawn
         shell: pwsh
         run: |
           if (-not (Test-Path dawn)) {
-            git clone $env:DAWN_REPO dawn
+            git clone ${{ vars.DAWN_REPO }} dawn
           }
 
       - name: Configure Git
@@ -52,7 +40,7 @@ jobs:
         run: |
           cd dawn
           git fetch --tags --force --quiet
-          git checkout --quiet "$env:DAWN_TAG"
+          git checkout --quiet ${{ vars.DAWN_TAG }}
           git rev-parse --short HEAD | Out-File -Encoding ascii ..\DAWN_GIT.txt
 
       - name: Fetch deps
@@ -179,12 +167,12 @@ jobs:
         uses: softprops/action-gh-release@v2
         continue-on-error: true
         with:
-          tag_name: ngixi-assets-${{ env.NGIXI_ASSET_VERSION }}
+          tag_name: ngixi-assets-${{ vars.NGIXI_ASSET_VERSION }}
           target_commitish: ${{ github.sha }}
-          name: NGIXI Assets ${{ env.NGIXI_ASSET_VERSION }} (Dawn ${{ env.DAWN_TAG }})
+          name: NGIXI Assets ${{ vars.NGIXI_ASSET_VERSION }} (Dawn ${{ vars.DAWN_TAG }})
           body: |
-            NGIXI Assets v${{ env.NGIXI_ASSET_VERSION }}
-            Dawn: ${{ env.DAWN_TAG }}
+            NGIXI Assets v${{ vars.NGIXI_ASSET_VERSION }}
+            Dawn: ${{ vars.DAWN_TAG }}
             Wasmtime: TODO
             FreeType: TODO
 
