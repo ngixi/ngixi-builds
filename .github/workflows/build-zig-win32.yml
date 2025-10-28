@@ -50,36 +50,11 @@ jobs:
           cd zigwin32gen
           zig build
 
-      - name: Setup Zig bindings repository
-        shell: pwsh
-        run: |
-          $repoName = "ngixi-zig-win32"
-          $repoPath = "../$repoName"
-
-          # Create directory for the separate repo
-          New-Item -ItemType Directory -Path $repoPath -Force
-
-          # Initialize git repo
-          git -C $repoPath init
-          git -C $repoPath config user.name "ngixi-builds"
-          git -C $repoPath config user.email "builds@ngixi.com"
-
-          # Copy zig-out contents to the repo
-          Copy-Item -Recurse "zigwin32gen/zig-out/*" $repoPath/ -Force
-          Copy-Item "ZIG_WIN32_GIT.txt" $repoPath/
-
-          # Commit and tag
-          git -C $repoPath add .
-          $commitMsg = "Zig Win32 Bindings v${{ vars.ZIGGEN_TAG }}"
-          git -C $repoPath commit -m $commitMsg
-          git -C $repoPath tag "v${{ vars.ZIGGEN_TAG }}"
-
       - name: Create Zig Win32 Release
         uses: softprops/action-gh-release@v2
         with:
-          repository: ngixi/ngixi-zig-win32
-          tag_name: v${{ vars.ZIGGEN_TAG }}
-          target_commitish: v${{ vars.ZIGGEN_TAG }}
+          tag_name: zig-win32-${{ vars.ZIGGEN_TAG }}
+          target_commitish: ${{ github.sha }}
           name: Zig Win32 Bindings ${{ vars.ZIGGEN_TAG }}
           body: |
             Zig Windows API Bindings v${{ vars.ZIGGEN_TAG }}
