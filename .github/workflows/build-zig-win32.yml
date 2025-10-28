@@ -74,7 +74,7 @@ jobs:
           git clone https://github.com/ngixi/ngixi-builds.git .
           
           # Create orphaned branch with no contents
-          git checkout --orphan "zig-release-${{ vars.ZIGGEN_TAG }}"
+          git checkout --orphan "zig-win32-bindings-${{ vars.ZIGGEN_TAG }}"
           
           # Reset to the first commit of the repo (empty state)
           $firstCommit = git rev-list --max-parents=0 HEAD
@@ -88,13 +88,13 @@ jobs:
           git commit -m "Zig Win32 Bindings v${{ vars.ZIGGEN_TAG }}"
           
           # Force push the release branch
-          git push origin "zig-release-${{ vars.ZIGGEN_TAG }}" --force
+          git push origin "zig-win32-bindings-${{ vars.ZIGGEN_TAG }}" --force
 
       - name: Create GitHub release
         uses: softprops/action-gh-release@v2
         with:
           tag_name: zig-win32-${{ vars.ZIGGEN_TAG }}
-          target_commitish: zig-release-${{ vars.ZIGGEN_TAG }}
+          target_commitish: zig-win32-bindings-${{ vars.ZIGGEN_TAG }}
           name: Zig Win32 Bindings ${{ vars.ZIGGEN_TAG }}
           body: |
             Zig Windows API Bindings v${{ vars.ZIGGEN_TAG }}
