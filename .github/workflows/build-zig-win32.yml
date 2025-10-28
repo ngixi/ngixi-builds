@@ -56,14 +56,10 @@ jobs:
           cd zigwin32gen
           zig build
 
-      - name: Prepare Zig Win32 bindings assets
+      - name: Add version info to zig-out
         shell: pwsh
         run: |
-          New-Item -ItemType Directory -Path zig-win32-bindings-assets -Force
-          # Copy the generated bindings from zig-out
-          Copy-Item -Recurse zigwin32gen\zig-out\* zig-win32-bindings-assets\
-          # Add version info
-          Copy-Item ZIG_WIN32_GIT.txt zig-win32-bindings-assets\
+          Copy-Item ZIG_WIN32_GIT.txt zigwin32gen\zig-out\
 
       - name: Delete existing Zig Win32 release (if exists)
         shell: pwsh
@@ -88,4 +84,4 @@ jobs:
             Zig Windows API Bindings v${{ vars.ZIGGEN_TAG }}
             Generated from ${{ vars.ZIGGEN_REPO }}
           files: |
-            zig-win32-build/zig-win32-bindings-assets/**
+            zigwin32gen/zig-out/**
