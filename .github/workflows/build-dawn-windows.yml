@@ -56,9 +56,18 @@ jobs:
         shell: cmd
         run: |
           cd dawn
-          rmdir /s /q out 2>nul
           cmake -S . -B out -G Ninja ^
             -DCMAKE_BUILD_TYPE=Release ^
+            -DCMAKE_C_COMPILER=cl ^
+            -DCMAKE_CXX_COMPILER=cl ^
+            -DCMAKE_CXX_FLAGS="/DNOMINMAX /DWIN32_LEAN_AND_MEAN" ^
+            -DCMAKE_SYSTEM_VERSION=10.0 ^
+            -DCMAKE_MSVC_RUNTIME_LIBRARY=MultiThreadedDLL ^
+            -DCMAKE_INTERPROCEDURAL_OPTIMIZATION=ON ^
+            -DCMAKE_C_FLAGS_RELEASE="/O2 /GL /Gw /Gy /Oi /DNDEBUG" ^
+            -DCMAKE_CXX_FLAGS_RELEASE="/O2 /GL /Gw /Gy /Oi /MP /DNDEBUG" ^
+            -DCMAKE_SHARED_LINKER_FLAGS_RELEASE="/INCREMENTAL:NO /OPT:REF /OPT:ICF /LTCG" ^
+            -DCMAKE_EXE_LINKER_FLAGS_RELEASE="/INCREMENTAL:NO /OPT:REF /OPT:ICF /LTCG" ^                                                                                                                        
             -DBUILD_SHARED_LIBS=OFF ^
             -DDAWN_BUILD_MONOLITHIC_LIBRARY=SHARED ^
             -DDAWN_ENABLE_INSTALL=ON ^
