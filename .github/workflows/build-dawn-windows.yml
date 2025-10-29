@@ -52,47 +52,46 @@ jobs:
           Copy-Item scripts/standalone.gclient .gclient -Force
           gclient sync
 
-          - name: Configure (dawn shared dll)
-            shell: cmd
-            run: |
-              cd dawn
-              rmdir /s /q out 2>nul
-              cmake -S . -B out -G Ninja ^
-                -DCMAKE_BUILD_TYPE=Release ^
-                -DBUILD_SHARED_LIBS=OFF ^
-                -DDAWN_BUILD_MONOLITHIC_LIBRARY=SHARED ^
-                -DDAWN_ENABLE_INSTALL=ON ^
-                -DDAWN_BUILD_TESTS=OFF ^
-                -DDAWN_BUILD_SAMPLES=ON ^
-                -DDAWN_BUILD_BENCHMARKS=OFF ^
-                -DDAWN_ENABLE_D3D12=ON ^
-                -DDAWN_ENABLE_D3D11=OFF ^
-                -DDAWN_ENABLE_VULKAN=ON ^             ^
-                -DDAWN_ENABLE_DESKTOP_GL=OFF ^
-                -DDAWN_ENABLE_OPENGLES=OFF ^
-                -DDAWN_ENABLE_NULL=ON ^
-                -DDAWN_USE_BUILT_DXC=ON ^
-                -DDAWN_FETCH_DEPENDENCIES=OFF ^
-                ^
-                -DTINT_BUILD_SPV_READER=ON ^
-                -DTINT_BUILD_WGSL_READER=ON ^
-                -DTINT_BUILD_GLSL_WRITER=ON ^
-                -DTINT_BUILD_GLSL_VALIDATOR=ON ^
-                -DTINT_BUILD_HLSL_WRITER=ON ^
-                -DTINT_BUILD_MSL_WRITER=ON ^
-                -DTINT_BUILD_SPV_WRITER=ON ^
-                -DTINT_BUILD_WGSL_WRITER=ON ^
-                -DTINT_BUILD_NULL_WRITER=ON ^
-                -DTINT_BUILD_IR_BINARY=ON ^
-                -DTINT_BUILD_FUZZERS=OFF ^         REM: MSVC/libFuzzer mismatch
-                -DTINT_BUILD_BENCHMARKS=ON ^
-                -DTINT_BUILD_TESTS=ON ^
-                -DTINT_BUILD_AS_OTHER_OS=OFF ^
-                -DTINT_BUILD_TINTD=ON ^
-                -DTINT_ENABLE_IR_VALIDATION=ON ^
-                -DTINT_ENABLE_BREAK_IN_DEBUGGER=ON ^
-                -DTINT_CHECK_CHROMIUM_STYLE=ON ^
-                -DTINT_RANDOMIZE_HASHES=ON
+      - name: Configure (dawn shared dll)
+        shell: pwsh
+        run: |
+          cd dawn
+          if (Test-Path out) { Remove-Item out -Recurse -Force }
+          cmake -S . -B out -G Ninja `
+            -DCMAKE_BUILD_TYPE=Release `
+            -DBUILD_SHARED_LIBS=OFF `
+            -DDAWN_BUILD_MONOLITHIC_LIBRARY=SHARED `
+            -DDAWN_ENABLE_INSTALL=ON `
+            -DDAWN_BUILD_TESTS=OFF `
+            -DDAWN_BUILD_SAMPLES=ON `
+            -DDAWN_BUILD_BENCHMARKS=OFF `
+            -DDAWN_ENABLE_D3D12=ON `
+            -DDAWN_ENABLE_D3D11=OFF `
+            -DDAWN_ENABLE_VULKAN=ON `
+            -DDAWN_ENABLE_DESKTOP_GL=OFF `
+            -DDAWN_ENABLE_OPENGLES=OFF `
+            -DDAWN_ENABLE_NULL=ON `
+            -DDAWN_USE_BUILT_DXC=ON `
+            -DDAWN_FETCH_DEPENDENCIES=OFF `
+            -DTINT_BUILD_SPV_READER=ON `
+            -DTINT_BUILD_WGSL_READER=ON `
+            -DTINT_BUILD_GLSL_WRITER=ON `
+            -DTINT_BUILD_GLSL_VALIDATOR=ON `
+            -DTINT_BUILD_HLSL_WRITER=ON `
+            -DTINT_BUILD_MSL_WRITER=ON `
+            -DTINT_BUILD_SPV_WRITER=ON `
+            -DTINT_BUILD_WGSL_WRITER=ON `
+            -DTINT_BUILD_NULL_WRITER=ON `
+            -DTINT_BUILD_IR_BINARY=ON `
+            -DTINT_BUILD_FUZZERS=OFF `        # MSVC/libFuzzer mismatch
+            -DTINT_BUILD_BENCHMARKS=ON `
+            -DTINT_BUILD_TESTS=ON `
+            -DTINT_BUILD_AS_OTHER_OS=OFF `
+            -DTINT_BUILD_TINTD=ON `
+            -DTINT_ENABLE_IR_VALIDATION=ON `
+            -DTINT_ENABLE_BREAK_IN_DEBUGGER=ON `
+            -DTINT_CHECK_CHROMIUM_STYLE=ON `
+            -DTINT_RANDOMIZE_HASHES=ON
       
       - name: Build (monolithic SHARED)
         shell: cmd
