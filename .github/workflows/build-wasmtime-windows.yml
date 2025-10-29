@@ -13,7 +13,7 @@ jobs:
         with:
           clean: false
 
-      - uses: ./.github/actions/setup-windows-build
+      - uses: ./.github/actions/setup-build
         with:
           build-dir: wasmtime-build
 

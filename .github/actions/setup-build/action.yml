@@ -1,0 +1,31 @@
+name: 'Setup Build'
+description: 'Setup build environment and create build directory'
+
+inputs:
+  build-dir:
+    description: 'Build directory name'
+    required: true
+
+runs:
+  using: 'composite'
+  steps:
+    - name: Configure Git
+      shell: pwsh
+      run: |
+        git config --global user.email "build@ngixi.local"
+        git config --global user.name "NGIXI Build Bot"
+        git config --global depot-tools.allowGlobalGitConfig false
+
+    - name: Setup Visual Studio environment (If Windows)
+      shell: cmd
+      run: |
+        if "%RUNNER_OS%"=="Windows" (
+          call "C:\Program Files\Microsoft Visual Studio\2022\Community\VC\Auxiliary\Build\vcvars64.bat"
+        )
+
+    - name: Create build directory
+      shell: pwsh
+      run: |
+        if (-not (Test-Path ${{ inputs.build-dir }})) {
+          New-Item -ItemType Directory -Path ${{ inputs.build-dir }}
+        }

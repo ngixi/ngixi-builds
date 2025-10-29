@@ -1,6 +1,9 @@
 name: Build Dawn Windows
 
 on:
+  push:
+    branches:
+      - main
   workflow_dispatch:
   workflow_call:
 
@@ -13,7 +16,7 @@ jobs:
         with:
           clean: false
 
-      - uses: ./.github/actions/setup-windows-build
+      - uses: ./.github/actions/setup-build
         with:
           build-dir: dawn-build
 
@@ -35,14 +38,6 @@ jobs:
             git clone ${{ vars.DAWN_REPO }} dawn
           }
 
-      - name: Configure Git
-        shell: pwsh
-        run: |
-          git config --global user.email "build@ngixi.local"
-          git config --global user.name "NGIXI Build Bot"
-          git config --global --add safe.directory "$PWD\dawn"
-          git config --global depot-tools.allowGlobalGitConfig false
-
       - name: Checkout tag
         shell: pwsh
         run: |
@@ -58,13 +53,11 @@ jobs:
           Copy-Item scripts/standalone.gclient .gclient -Force
           gclient sync
 
-      # Monolithic DLL => one webgpu_dawn.dll
-      - name: Configure (monolithic SHARED)
+      - name: Configure (dawn shared dll)
         shell: cmd
         run: |
-          call "C:\Program Files\Microsoft Visual Studio\2022\Community\VC\Auxiliary\Build\vcvars64.bat"
           cd dawn
-          cmake -S . -B out\mono-shared -G Ninja ^
+          cmake -S . -B out -G Ninja ^
             -DCMAKE_BUILD_TYPE=Release ^
             -DCMAKE_C_COMPILER=cl ^
             -DCMAKE_CXX_COMPILER=cl ^
@@ -92,83 +85,25 @@ jobs:
       - name: Build (monolithic SHARED)
         shell: cmd
         run: |
-          call "C:\Program Files\Microsoft Visual Studio\2022\Community\VC\Auxiliary\Build\vcvars64.bat"
           cd dawn
-          cmake --build out\mono-shared --parallel
+          cmake --build out --parallel
 
       - name: Install (monolithic SHARED)
         shell: cmd
         run: |
-          call "C:\Program Files\Microsoft Visual Studio\2022\Community\VC\Auxiliary\Build\vcvars64.bat"
           cd dawn
-          cmake --install out\mono-shared --prefix install\mono-shared
+          cmake --install out --prefix install
 
       - name: Report DLL dependents (monolithic SHARED)
         shell: cmd
         run: |
-          call "C:\Program Files\Microsoft Visual Studio\2022\Community\VC\Auxiliary\Build\vcvars64.bat"
-          cd dawn\install\mono-shared\bin
-          if exist webgpu_dawn.dll dumpbin /dependents webgpu_dawn.dll > "..\..\..\..\DEPENDENTS.txt"
-
-      # Monolithic static => one webgpu_dawn.lib
-      - name: Configure (monolithic STATIC)
-        shell: cmd
-        run: |
-          call "C:\Program Files\Microsoft Visual Studio\2022\Community\VC\Auxiliary\Build\vcvars64.bat"
-          cd dawn
-          cmake -S . -B out\mono-static -G Ninja ^
-            -DCMAKE_BUILD_TYPE=Release ^
-            -DCMAKE_C_COMPILER=cl ^
-            -DCMAKE_CXX_COMPILER=cl ^
-            -DCMAKE_CXX_FLAGS="/DNOMINMAX /DWIN32_LEAN_AND_MEAN" ^
-            -DCMAKE_SYSTEM_VERSION=10.0 ^
-            -DCMAKE_MSVC_RUNTIME_LIBRARY=MultiThreadedDLL ^
-            -DBUILD_SHARED_LIBS=OFF ^
-            -DDAWN_BUILD_MONOLITHIC_LIBRARY=STATIC ^
-            -DDAWN_ENABLE_INSTALL=ON ^
-            -DDAWN_BUILD_TESTS=OFF ^
-            -DDAWN_BUILD_SAMPLES=OFF ^
-            -DDAWN_BUILD_BENCHMARKS=OFF ^
-            -DDAWN_ENABLE_BACKEND_D3D12=ON ^
-            -DDAWN_ENABLE_BACKEND_VULKAN=ON ^
-            -DDAWN_ENABLE_BACKEND_OPENGL=OFF ^
-            -DDAWN_ENABLE_BACKEND_METAL=OFF ^
-            -DDAWN_ENABLE_BACKEND_NULL=OFF ^
-            -DTINT_BUILD_TESTS=OFF ^
-            -DTINT_BUILD_SAMPLES=OFF ^
-            -DTINT_BUILD_DOCS=OFF ^
-            -DTINT_ENABLE_DXC=ON ^
-            -DTINT_ENABLE_WGSL_READER=ON ^
-            -DTINT_ENABLE_SPV_READER=OFF
-
-      - name: Build (monolithic STATIC)
-        shell: cmd
-        run: |
-          call "C:\Program Files\Microsoft Visual Studio\2022\Community\VC\Auxiliary\Build\vcvars64.bat"
-          cd dawn
-          cmake --build out\mono-static --parallel
-
-      - name: Install (monolithic STATIC)
-        shell: cmd
-        run: |
-          call "C:\Program Files\Microsoft Visual Studio\2022\Community\VC\Auxiliary\Build\vcvars64.bat"
-          cd dawn
-          cmake --install out\mono-static --prefix install\mono-static
-
-      - name: Prepare Dawn assets
-        shell: pwsh
-        run: |
-          if (Test-Path dawn-assets) {
-            Remove-Item -Recurse -Force dawn-assets
-          }
-          New-Item -ItemType Directory -Path dawn-assets -Force
-          Copy-Item -Recurse -Path dawn/install/* -Destination dawn-assets/
+          cd dawn\install\bin
+          if exist webgpu_dawn.dll dumpbin /dependents webgpu_dawn.dll > "DEPENDENTS.txt"
 
       - name: Upload Dawn artifacts
         uses: actions/upload-artifact@v4
         with:
           name: dawn-windows-assets
           path: |
-            dawn-build/dawn-assets/
+            dawn-build/dawn/install/
             dawn-build/DAWN_GIT.txt
-            dawn-build/DEPENDENTS.txt

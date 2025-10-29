@@ -1,9 +1,6 @@
 name: Build SDL Windows
 
 on:
-  push:
-    branches:
-      - main
   workflow_dispatch:
   workflow_call:
 
@@ -16,7 +13,7 @@ jobs:
         with:
           clean: false
 
-      - uses: ./.github/actions/setup-windows-build
+      - uses: ./.github/actions/setup-build
         with:
           build-dir: sdl-build
 
@@ -46,7 +43,6 @@ jobs:
       - name: Configure SDL
         shell: cmd
         run: |
-          call "C:\Program Files\Microsoft Visual Studio\2022\Community\VC\Auxiliary\Build\vcvars64.bat"
           cd sdl
           cmake -S . -B build -G Ninja ^
             -DCMAKE_BUILD_TYPE=Release ^
@@ -62,14 +58,12 @@ jobs:
       - name: Build SDL
         shell: cmd
         run: |
-          call "C:\Program Files\Microsoft Visual Studio\2022\Community\VC\Auxiliary\Build\vcvars64.bat"
           cd sdl
           cmake --build build --parallel
 
       - name: Install SDL
         shell: cmd
         run: |
-          call "C:\Program Files\Microsoft Visual Studio\2022\Community\VC\Auxiliary\Build\vcvars64.bat"
           cd sdl
           cmake --install build --prefix install\windows-x64-static
 
