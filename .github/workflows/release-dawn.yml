@@ -58,3 +58,14 @@ jobs:
         with:
           name: dawn-release
           path: dawn-*.tar.gz
+
+      - name: Create GitHub Release
+        uses: softprops/action-gh-release@v1
+        with:
+          tag_name: dawn-${{ vars.DAWN_TAG }}
+          name: Dawn ${{ vars.DAWN_TAG }}
+          files: dawn-*.tar.gz
+          draft: false
+          prerelease: false
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
