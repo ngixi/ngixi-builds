@@ -16,12 +16,22 @@ runs:
         git config --global user.name "NGIXI Build Bot"
         git config --global depot-tools.allowGlobalGitConfig false
 
-    - name: Setup Visual Studio environment (If Windows)
-      shell: cmd
+    - name: Setup Visual Studio environment (Windows)
+      shell: pwsh
       run: |
-        if "%RUNNER_OS%"=="Windows" (
-          call "C:\Program Files\Microsoft Visual Studio\2022\Community\VC\Auxiliary\Build\vcvars64.bat"
-        )
+        if ($env:RUNNER_OS -eq "Windows") {
+          $vsPath = "${env:ProgramFiles}\Microsoft Visual Studio\2022\Community\VC\Auxiliary\Build"
+          $vcvarsScript = Join-Path $vsPath "vcvars64.bat"
+
+          # Run vcvars64.bat and capture environment
+          cmd /c "call `"$vcvarsScript`" >nul 2>&1 && set" | ForEach-Object {
+            if ($_ -match '^([^=]+)=(.*)$') {
+              $varName = $matches[1]
+              $varValue = $matches[2]
+              [Environment]::SetEnvironmentVariable($varName, $varValue, "Process")
+            }
+          }
+        }
 
     - name: Create build directory
       shell: pwsh
