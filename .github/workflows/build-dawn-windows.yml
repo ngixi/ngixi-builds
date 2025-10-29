@@ -56,22 +56,23 @@ jobs:
         shell: cmd
         run: |
           cd dawn
+          rmdir /s /q out 2>nul
           cmake -S . -B out -G Ninja ^
             -DCMAKE_BUILD_TYPE=Release ^
             -DBUILD_SHARED_LIBS=OFF ^
             -DDAWN_BUILD_MONOLITHIC_LIBRARY=SHARED ^
             -DDAWN_ENABLE_INSTALL=ON ^
-            -DDAWN_ENABLE_BACKEND_D3D11=OFF ^
             -DDAWN_BUILD_TESTS=OFF ^
             -DDAWN_BUILD_SAMPLES=ON ^
             -DDAWN_BUILD_BENCHMARKS=OFF ^
-            -DDAWN_ENABLE_BACKEND_D3D12=ON ^
-            -DDAWN_ENABLE_BACKEND_VULKAN=OFF ^
-            -DDAWN_ENABLE_BACKEND_OPENGL=OFF ^
-            -DDAWN_ENABLE_BACKEND_NULL=ON ^
-            -DDAWN_ENABLE_DXC=ON ^
-            -DDAWN_ENABLE_D3D12_AGILITY_SDK=OFF
-
+            -DDAWN_ENABLE_D3D12=ON ^
+            -DDAWN_ENABLE_D3D11=OFF ^
+            -DDAWN_ENABLE_VULKAN=OFF ^
+            -DDAWN_ENABLE_DESKTOP_GL=OFF ^
+            -DDAWN_ENABLE_OPENGLES=OFF ^
+            -DDAWN_ENABLE_NULL=ON ^
+            -DDAWN_USE_BUILT_DXC=ON
+      
       - name: Build (monolithic SHARED)
         shell: cmd
         run: |
