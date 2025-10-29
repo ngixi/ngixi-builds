@@ -27,7 +27,6 @@ jobs:
       DEPOT_TOOLS_WIN_TOOLCHAIN: 0
 
     steps:
-
       - uses: ilammy/msvc-dev-cmd@v1
 
       - name: Checkout Dawn
@@ -57,10 +56,12 @@ jobs:
         run: |
           cd dawn
           rmdir /s /q out 2>nul
+          set CMAKE_REQUIRED_FLAGS=/std:c++20
           cmake -S . -B out -G Ninja ^
             -DCMAKE_C_COMPILER=cl ^
             -DCMAKE_CXX_COMPILER=cl ^
             -DCMAKE_BUILD_TYPE=Release ^
+            -DCMAKE_CXX_STANDARD=20 ^
             -DBUILD_SHARED_LIBS=OFF ^
             -DDAWN_BUILD_MONOLITHIC_LIBRARY=SHARED ^
             -DDAWN_ENABLE_INSTALL=ON ^
@@ -94,7 +95,7 @@ jobs:
             -DTINT_ENABLE_BREAK_IN_DEBUGGER=ON ^
             -DTINT_CHECK_CHROMIUM_STYLE=ON ^
             -DTINT_RANDOMIZE_HASHES=ON
-      
+
       - name: Build (monolithic SHARED)
         shell: cmd
         run: |
