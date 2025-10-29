@@ -113,7 +113,7 @@ jobs:
             exit 1
           }
           $content = ".{" + "`n" + "    .name = .dawn," + "`n" + "    .version = `"$version`"," + "`n" + "    .paths = .{`"`"`"}," + "`n" + "}"
-          Set-Content -Path "dawn/install/build.zig.zon" -Value $content -Force
+          Set-Content -Path "dawn/install/build.zig.zon" -Value $content -Encoding UTF8 -Force
 
       - name: Create tar archive
         shell: cmd
