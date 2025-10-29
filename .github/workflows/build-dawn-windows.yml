@@ -27,7 +27,6 @@ jobs:
       DEPOT_TOOLS_WIN_TOOLCHAIN: 0
 
     steps:
-
       - uses: ilammy/msvc-dev-cmd@v1
 
       - name: Checkout Dawn
@@ -56,6 +55,7 @@ jobs:
         shell: cmd
         run: |
           cd dawn
+          rmdir /s /q out 2>nul
           cmake -S . -B out -G Ninja ^
             -DCMAKE_BUILD_TYPE=Release ^
             -DCMAKE_C_COMPILER=cl ^
@@ -73,7 +73,6 @@ jobs:
             -DDAWN_BUILD_MONOLITHIC_LIBRARY=SHARED ^
             -DDAWN_USE_DXC=ON ^
             -DDAWN_ENABLE_INSTALL=ON ^
-
             -DDAWN_BUILD_TESTS=OFF ^
             -DDAWN_BUILD_SAMPLES=OFF ^
             -DDAWN_BUILD_BENCHMARKS=OFF ^
