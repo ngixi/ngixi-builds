@@ -125,3 +125,11 @@ jobs:
         run: |
           cd dawn\install\bin
           if exist webgpu_dawn.dll dumpbin /dependents webgpu_dawn.dll > "DEPENDENTS.txt"
+
+      - name: Upload Dawn artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: dawn-windows-assets
+          path: |
+            dawn-build/dawn-win-msvc.tar.gz
+            dawn-build/DAWN_GIT.txt
