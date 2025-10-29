@@ -59,10 +59,8 @@ jobs:
           rmdir /s /q out 2>nul
           cmake -S . -B out -G Ninja ^
             -DCMAKE_BUILD_TYPE=Release ^
-            -DCMAKE_C_COMPILER=cl ^
-            -DCMAKE_CXX_COMPILER=cl ^
-            -DCMAKE_CXX_FLAGS="/std:c++20" ^
-            -DCMAKE_POLICY_DEFAULT_CMP0141=NEW ^
+            -DCMAKE_CXX_STANDARD=20 ^
+            -DCMAKE_CXX_STANDARD_REQUIRED=ON ^
             -DCMAKE_SYSTEM_VERSION=10.0 ^
             -DCMAKE_MSVC_RUNTIME_LIBRARY=MultiThreadedDLL ^
             -DCMAKE_INTERPROCEDURAL_OPTIMIZATION=ON ^
