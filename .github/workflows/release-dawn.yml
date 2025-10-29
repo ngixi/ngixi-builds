@@ -50,10 +50,11 @@ jobs:
       - name: Create release tar
         shell: bash
         run: |
-          tar -czf dawn-release.tar.gz dawn-release/
+          TAG="${{ vars.DAWN_TAG }}"
+          cd dawn-release && tar -czf "../dawn-$TAG.tar.gz" *
 
       - name: Upload release artifact
         uses: actions/upload-artifact@v4
         with:
           name: dawn-release
-          path: dawn-release.tar.gz
+          path: dawn-*.tar.gz
