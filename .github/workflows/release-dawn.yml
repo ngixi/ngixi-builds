@@ -1,0 +1,59 @@
+name: Release Dawn
+
+on:
+  push:
+    branches:
+      - main
+  workflow_dispatch:
+
+jobs:
+  build-windows:
+    uses: ./.github/workflows/build-dawn-windows.yml
+
+  release:
+    runs-on: lin-build
+    needs: build-windows
+    steps:
+      - name: Checkout ngixi-builds repo
+        uses: actions/checkout@v4
+
+      - uses: ./.github/actions/setup-build
+        with:
+          build-dir: dawn-build
+
+      - name: Download Dawn artifacts
+        uses: actions/download-artifact@v4
+        with:
+          name: dawn-windows-assets
+
+      - name: Create release structure
+        shell: bash
+        run: |
+          rm -rf dawn-release
+          mkdir -p dawn-release/windows-x64
+          tar -xzf dawn-win-msvc.tar.gz -C dawn-release/windows-x64
+
+      - name: Create build.zig.zon
+        shell: pwsh
+        run: |
+          $tag = "${{ vars.DAWN_TAG }}"
+          # Parse tag, e.g., if "v20251026.130842", version = "2025.10.26"
+          if ($tag -match "v(\d{4})(\d{2})(\d{2})\.\d+") {
+            $version = "$($matches[1]).$($matches[2]).$($matches[3])"
+          } else {
+            Write-Error "Unrecognized DAWN_TAG format: $tag"
+            exit 1
+          }
+          $content = ".{" + "`n" + "    .name = `"dawn`"," + "`n" + "    .version = `"$version`"," + "`n" + "}"
+          Set-Content -Path "dawn-release/build.zig.zon" -Value $content -Force
+
+      - name: Create release tar
+        shell: bash
+        run: |
+          tar -czf dawn-release.tar.gz dawn-release/
+
+      - name: Upload release artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: dawn-release
+          path: dawn-release.tar.gz

@@ -1,9 +1,6 @@
 name: Build Dawn Windows
 
 on:
-  push:
-    branches:
-      - main
   workflow_dispatch:
   workflow_call:
 
@@ -113,7 +110,7 @@ jobs:
             Write-Error "Unrecognized DAWN_TAG format: $tag"
             exit 1
           }
-          $content = ".{" + "`n" + "    .name = .dawn_win," + "`n" + "    .version = `"$version`"," + "`n" + "    .paths = .{`"`"`"}," + "`n" + "}"
+          $content = ".{" + "`n" + "    .name = .dawn," + "`n" + "    .version = `"$version`"," + "`n" + "    .paths = .{`"`"`"}," + "`n" + "}"
           Set-Content -Path "dawn/install/build.zig.zon" -Value $content -Encoding UTF8 -Force
 
       - name: Create tar archive
