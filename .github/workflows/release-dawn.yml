@@ -29,12 +29,24 @@ jobs:
         with:
           name: dawn-windows-assets
 
+      - name: Download DirectX Shader Compiler
+        shell: pwsh
+        run: |
+          $dxcUrl = "https://github.com/microsoft/DirectXShaderCompiler/releases/download/v1.8.2505.1/dxc_2025_07_14.zip"
+          Invoke-WebRequest -Uri $dxcUrl -OutFile "dxc.zip"
+          Expand-Archive -Path "dxc.zip" -DestinationPath "dxc" -Force
+          Remove-Item "dxc.zip"
+
       - name: Create release structure
         shell: bash
         run: |
           rm -rf dawn-release
           mkdir -p dawn-release/windows-x64
           tar -xzf dawn-win-msvc.tar.gz -C dawn-release/windows-x64
+          
+          # Copy DXC DLLs to bin directory
+          cp dxc/bin/x64/dxcompiler.dll dawn-release/windows-x64/bin/
+          cp dxc/bin/x64/dxil.dll dawn-release/windows-x64/bin/
 
       - name: Create build.zig.zon
         shell: pwsh
