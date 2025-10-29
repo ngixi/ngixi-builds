@@ -53,14 +53,11 @@ jobs:
             -DCMAKE_C_COMPILER=cl ^
             -DCMAKE_CXX_COMPILER=cl ^
             -DCMAKE_SYSTEM_VERSION=10.0 ^
-            -DCMAKE_MSVC_RUNTIME_LIBRARY=MultiThreadedDLL ^
-            -DSDL_SHARED=ON ^
+            -DCMAKE_MSVC_RUNTIME_LIBRARY=MultiThreaded ^
+            -DSDL_SHARED=OFF ^
             -DSDL_STATIC=ON ^
-            -DSDL_TEST_LIBRARY=ON ^
-            -DSDL_EXAMPLES=ON ^
-            -DSDL_TESTS=ON ^
-            -DSDL_INSTALL_EXAMPLES=ON ^
-            -DSDL_INSTALL_TESTS=ON
+            -DSDL_TEST_LIBRARY=OFF ^
+            -DSDL_TESTS=OFF
 
       - name: Build SDL
         shell: cmd
@@ -74,7 +71,7 @@ jobs:
         run: |
           call "C:\Program Files\Microsoft Visual Studio\2022\Community\VC\Auxiliary\Build\vcvars64.bat"
           cd sdl
-          cmake --install build --prefix install
+          cmake --install build --prefix install\windows-x64-static
 
       - name: Prepare SDL assets
         shell: pwsh
@@ -83,7 +80,7 @@ jobs:
             Remove-Item -Recurse -Force sdl-assets
           }
           New-Item -ItemType Directory -Path sdl-assets -Force
-          Copy-Item -Recurse -Path sdl/install/* -Destination sdl-assets/
+          Copy-Item -Recurse -Path sdl/install/windows-x64-static/* -Destination sdl-assets/
 
       - name: Upload SDL artifacts
         uses: actions/upload-artifact@v4
