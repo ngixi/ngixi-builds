@@ -72,7 +72,7 @@ jobs:
             -DDAWN_ENABLE_OPENGLES=OFF ^
             -DDAWN_ENABLE_NULL=ON ^
             -DDAWN_USE_BUILT_DXC=ON ^
-            -DDAWN_FETCH_DEPENDENCIES=ON ^
+            -DDAWN_FETCH_DEPENDENCIES=OFF ^
             -DTINT_BUILD_SPV_READER=ON ^
             -DTINT_BUILD_WGSL_READER=ON ^
             -DTINT_BUILD_GLSL_WRITER=ON ^
