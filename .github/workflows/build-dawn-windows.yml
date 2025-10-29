@@ -58,8 +58,9 @@ jobs:
           cd dawn
           cmake -S . -B out -G Ninja ^
             -DCMAKE_BUILD_TYPE=Release ^
-            -DCMAKE_C_COMPILER=cl ^
+            -DCMAKE_C_COMPILER=cl ^            
             -DCMAKE_CXX_COMPILER=cl ^
+            -DCMAKE_CXX_STANDARD=17 ^            
             -DCMAKE_CXX_FLAGS="/DNOMINMAX /DWIN32_LEAN_AND_MEAN" ^
             -DCMAKE_SYSTEM_VERSION=10.0 ^
             -DCMAKE_MSVC_RUNTIME_LIBRARY=MultiThreadedDLL ^
