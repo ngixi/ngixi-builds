@@ -72,13 +72,14 @@ jobs:
             -DCMAKE_SHARED_LINKER_FLAGS_RELEASE="/INCREMENTAL:NO /OPT:REF /OPT:ICF /LTCG" ^
             -DCMAKE_EXE_LINKER_FLAGS_RELEASE="/INCREMENTAL:NO /OPT:REF /OPT:ICF /LTCG" ^
             -DBUILD_SHARED_LIBS=OFF ^
+            -DDAWN_ENABLE_D3D12_AGILITY_SDK=OFF ^
             -DDAWN_BUILD_MONOLITHIC_LIBRARY=SHARED ^
             -DDAWN_ENABLE_INSTALL=ON ^
             -DDAWN_BUILD_TESTS=OFF ^
             -DDAWN_BUILD_SAMPLES=OFF ^
             -DDAWN_BUILD_BENCHMARKS=OFF ^
             -DDAWN_ENABLE_BACKEND_D3D12=ON ^
-            -DDAWN_ENABLE_BACKEND_VULKAN=ON ^
+            -DDAWN_ENABLE_BACKEND_VULKAN=OFF ^
             -DDAWN_ENABLE_BACKEND_OPENGL=OFF ^
             -DDAWN_ENABLE_BACKEND_METAL=OFF ^
             -DDAWN_ENABLE_BACKEND_NULL=OFF ^
@@ -112,15 +113,15 @@ jobs:
             Write-Error "Unrecognized DAWN_TAG format: $tag"
             exit 1
           }
-          $content = ".{" + "`n" + "    .name = .dawn," + "`n" + "    .version = `"$version`"," + "`n" + "    .paths = .{`"`"`"}," + "`n" + "}"
+          $content = ".{" + "`n" + "    .name = .dawn_win," + "`n" + "    .version = `"$version`"," + "`n" + "    .paths = .{`"`"`"}," + "`n" + "}"
           Set-Content -Path "dawn/install/build.zig.zon" -Value $content -Encoding UTF8 -Force
 
       - name: Create tar archive
         shell: cmd
         run: |
           cd dawn\install
-          if exist ..\..\dawn-win-msvc.tar del ..\..\dawn-win-msvc.tar
-          tar -cf ..\..\dawn-win-msvc.tar *
+          if exist ..\..\dawn-win-msvc.tar.gz del ..\..\dawn-win-msvc.tar.gz
+          tar -czf ..\..\dawn-win-msvc.tar.gz *
 
       - name: Report DLL dependents
         shell: cmd
@@ -133,5 +134,5 @@ jobs:
         with:
           name: dawn-windows-assets
           path: |
-            dawn-build/dawn-win-msvc.tar
+            dawn-build/dawn-win-msvc.tar.gz
             dawn-build/DAWN_GIT.txt
