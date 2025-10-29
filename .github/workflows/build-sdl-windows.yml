@@ -25,6 +25,8 @@ jobs:
         working-directory: sdl-build
 
     steps:
+      - uses: ilammy/msvc-dev-cmd@v1
+
       - name: Clone SDL
         shell: pwsh
         run: |

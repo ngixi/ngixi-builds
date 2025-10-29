@@ -31,6 +31,8 @@ jobs:
 
     steps:
 
+      - uses: ilammy/msvc-dev-cmd@v1
+
       - name: Checkout Dawn
         shell: pwsh
         run: |
