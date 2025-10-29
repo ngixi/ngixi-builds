@@ -54,12 +54,20 @@ jobs:
           Copy-Item scripts/standalone.gclient .gclient -Force
           gclient sync
 
+      - name: Create CMake initial cache
+        shell: cmd
+        run: |
+          cd dawn
+          echo set(CMAKE_CXX_STANDARD 20 CACHE STRING "" FORCE) > initial-cache.cmake
+          echo set(CMAKE_CXX_STANDARD_REQUIRED ON CACHE BOOL "" FORCE) >> initial-cache.cmake
+          echo set(CMAKE_CXX_EXTENSIONS OFF CACHE BOOL "" FORCE) >> initial-cache.cmake
+
       - name: Configure (dawn shared dll)
         shell: cmd
         run: |
           cd dawn
           rmdir /s /q out 2>nul
-          cmake -S . -B out -G Ninja ^
+          cmake -C initial-cache.cmake -S . -B out -G Ninja ^
             -DCMAKE_BUILD_TYPE=Release ^
             -DCMAKE_CXX_STANDARD=20 ^
             -DCMAKE_CXX_STANDARD_REQUIRED=ON ^
