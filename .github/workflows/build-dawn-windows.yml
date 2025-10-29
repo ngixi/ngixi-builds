@@ -58,6 +58,8 @@ jobs:
           cd dawn
           rmdir /s /q out 2>nul
           cmake -S . -B out -G Ninja ^
+            -DCMAKE_C_COMPILER=cl ^
+            -DCMAKE_CXX_COMPILER=cl ^
             -DCMAKE_BUILD_TYPE=Release ^
             -DBUILD_SHARED_LIBS=OFF ^
             -DDAWN_BUILD_MONOLITHIC_LIBRARY=SHARED ^
