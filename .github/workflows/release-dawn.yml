@@ -67,7 +67,7 @@ jobs:
         with:
           tag_name: dawn-${{ vars.DAWN_TAG }}
           name: Dawn ${{ vars.DAWN_TAG }}
-          files: dawn-*.tar.gz
+          files: dawn-${{ vars.DAWN_TAG }}.tar.gz
           draft: false
           prerelease: false
         env:
