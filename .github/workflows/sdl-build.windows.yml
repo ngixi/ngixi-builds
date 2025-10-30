@@ -1,4 +1,4 @@
-name: Build SDL (Windows)
+name: Build SDL - win_x86_64-msvc
 
 on:
   workflow_dispatch:

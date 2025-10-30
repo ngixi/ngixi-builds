@@ -1,4 +1,4 @@
-name: Build Dawn (Windows)
+name: Build Dawn - win_x86_64-msvc
 
 on:
   workflow_dispatch:
