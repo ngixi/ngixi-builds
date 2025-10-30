@@ -31,6 +31,12 @@ jobs:
         with:
           name: dawn-windows-assets
 
+      - name: List downloaded files
+        shell: bash
+        run: |
+          pwd
+          ls -la
+
       - name: Create release structure
         shell: bash
         run: |
