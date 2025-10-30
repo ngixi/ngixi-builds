@@ -11,7 +11,7 @@ permissions:
 
 jobs:
   build-windows:
-    uses: ./.github/workflows/build/build-dawn-windows.yml
+    uses: ./.github/workflows/dawn-build.windows.yml
 
   release:
     runs-on: lin-build

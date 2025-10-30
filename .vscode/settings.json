@@ -32,7 +32,8 @@
     "*.resx": "${capture}.Designer.cs",
     "*.xaml": "${capture}.xaml.cs",
     "*.tsx": "${capture}.scss,${capture}.js,${capture}.pixi.ts",
-    "*.ts": "${capture}.scss,${capture}.js,${capture}.pixi.ts"
+    "*.ts": "${capture}.scss,${capture}.js,${capture}.pixi.ts",
+    "*-release.yml": "${capture}-build.*.yml"
   },
   "clangd.trace": "off",
   "clangd.arguments": [
