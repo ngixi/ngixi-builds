@@ -55,7 +55,6 @@ jobs:
         shell: cmd
         run: |
           cd dawn
-          rmdir /s /q out 2>nul
           cmake -S . -B out -G Ninja ^
             -DCMAKE_BUILD_TYPE=Release ^
             -DCMAKE_C_COMPILER=cl ^
