@@ -56,7 +56,7 @@ jobs:
             Write-Error "Unrecognized DAWN_TAG format: $tag"
             exit 1
           }
-          $content = ".{" + "`n" + "    .name = `"dawn`"," + "`n" + "    .version = `"$version`"," + "`n" + "    .paths = .{`"`"`"}," + "`n" + "}"
+          $content = ".{`n    .name = `"dawn`",`n    .version = `"$version`",`n    .paths = .{`"`"},`n}"
           Set-Content -Path "dawn-release/build.zig.zon" -Value $content -Force
 
       - name: Create release tar
