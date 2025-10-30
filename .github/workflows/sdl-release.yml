@@ -1,4 +1,4 @@
-name: SDL Release (Disabled)
+name: Release SDL (Disabled)
 
 on:
   workflow_dispatch:
