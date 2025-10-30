@@ -1,4 +1,4 @@
-name: Release ZigWin32 Bindings (Windows)
+name: Release ZigWin32 Bindings
 
 on:
   workflow_dispatch:
