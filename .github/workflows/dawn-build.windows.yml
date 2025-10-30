@@ -1,4 +1,4 @@
-name: Build Dawn Windows
+name: Build Dawn (Windows)
 
 on:
   workflow_dispatch:

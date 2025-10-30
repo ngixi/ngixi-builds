@@ -1,4 +1,4 @@
-name: Build SDL Windows
+name: Build SDL (Windows)
 
 on:
   workflow_dispatch:
