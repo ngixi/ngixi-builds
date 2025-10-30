@@ -87,6 +87,7 @@ jobs:
         shell: pwsh
         run: |
           cd dawn/out
+          Remove-Item -Recurse -Force -ErrorAction SilentlyContinue zip_assets
           New-Item -ItemType Directory -Force -Path zip_assets/bin
           New-Item -ItemType Directory -Force -Path zip_assets/include
           Copy-Item -Force *.dll zip_assets/bin/
@@ -110,8 +111,8 @@ jobs:
         shell: cmd
         run: |
           cd dawn\out\zip_assets
-          if exist ..\..\..\dawn-win-msvc.tar.gz del ..\..\..\dawn-win-msvc.tar.gz
-          tar -czf ..\..\..\dawn-win-msvc.tar.gz *
+          if exist dawn-win-msvc.tar.gz del dawn-win-msvc.tar.gz
+          tar -czf dawn-win-msvc.tar.gz bin include build.zig.zon
 
       - name: Report DLL dependents
         shell: cmd
@@ -124,5 +125,5 @@ jobs:
         with:
           name: dawn-windows-assets
           path: |
-            dawn-build/dawn-win-msvc.tar.gz
+            dawn-build/dawn/out/zip_assets/dawn-win-msvc.tar.gz
             dawn-build/DAWN_GIT.txt
