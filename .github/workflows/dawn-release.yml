@@ -1,4 +1,4 @@
-name: Release Dawn
+name: Release Dawn Binaries
 
 on:
   workflow_dispatch:

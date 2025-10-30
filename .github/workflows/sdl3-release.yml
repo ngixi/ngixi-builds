@@ -1,4 +1,4 @@
-name: Release SDL (Disabled)
+name: Release SDL3 Binaries
 
 on:
   workflow_dispatch:
