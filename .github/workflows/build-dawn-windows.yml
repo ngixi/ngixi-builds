@@ -93,26 +93,12 @@ jobs:
           Copy-Item -Force *.dll zip_assets/bin/
           Copy-Item -Force gen/include/dawn/webgpu.h zip_assets/include/
 
-      - name: Create build.zig.zon
-        shell: pwsh
-        run: |
-          $tag = "${{ vars.DAWN_TAG }}"
-          # Parse tag, e.g., if "v20251026.130842", version = "2025.10.26"
-          if ($tag -match "v(\d{4})(\d{2})(\d{2})\.\d+") {
-            $version = "$($matches[1]).$($matches[2]).$($matches[3])"
-          } else {
-            Write-Error "Unrecognized DAWN_TAG format: $tag"
-            exit 1
-          }
-          $content = ".{" + "`n" + "    .name = .dawn," + "`n" + "    .version = `"$version`"," + "`n" + "    .paths = .{`"`"`"}," + "`n" + "}"
-          Set-Content -Path "dawn/out/zip_assets/build.zig.zon" -Value $content -Encoding UTF8 -Force
-
       - name: Create tar archive
         shell: cmd
         run: |
           cd dawn\out\zip_assets
           if exist dawn-win-msvc.tar.gz del dawn-win-msvc.tar.gz
-          tar -czf dawn-win-msvc.tar.gz bin include build.zig.zon
+          tar -czf dawn-win-msvc.tar.gz bin include
 
       - name: Report DLL dependents
         shell: cmd
