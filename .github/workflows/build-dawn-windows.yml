@@ -111,5 +111,5 @@ jobs:
         with:
           name: dawn-windows-assets
           path: |
-            dawn/out/zip_assets/dawn-win-msvc.tar.gz
-            DAWN_GIT.txt
+            dawn-build/dawn/out/zip_assets/dawn-win-msvc.tar.gz
+            dawn-build/DAWN_GIT.txt
