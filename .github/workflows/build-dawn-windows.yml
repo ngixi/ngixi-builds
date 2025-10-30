@@ -94,11 +94,12 @@ jobs:
           Copy-Item -Force gen/include/dawn/webgpu.h zip_assets/include/
 
       - name: Create tar archive
-        shell: cmd
+        shell: pwsh
         run: |
-          cd dawn\out\zip_assets
-          if exist dawn-win-msvc.tar.gz del dawn-win-msvc.tar.gz
+          cd dawn/out/zip_assets
+          Remove-Item -Force -ErrorAction SilentlyContinue dawn-win-msvc.tar.gz
           tar -czf dawn-win-msvc.tar.gz bin include
+          Move-Item -Force dawn-win-msvc.tar.gz ../../../
 
       - name: Report DLL dependents
         shell: cmd
@@ -111,5 +112,5 @@ jobs:
         with:
           name: dawn-windows-assets
           path: |
-            dawn-build/dawn/out/zip_assets/dawn-win-msvc.tar.gz
+            dawn-build/dawn-win-msvc.tar.gz
             dawn-build/DAWN_GIT.txt

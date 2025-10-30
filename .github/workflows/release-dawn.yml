@@ -36,6 +36,7 @@ jobs:
         run: |
           pwd
           ls -la
+          find . -name "*.tar.gz"
 
       - name: Create release structure
         shell: bash
