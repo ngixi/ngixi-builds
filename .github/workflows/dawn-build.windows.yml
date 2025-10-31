@@ -95,10 +95,24 @@ jobs:
           Copy-Item -Force gen/include/dawn/webgpu.h zip_assets/include/
           Copy-Item -Force src/dawn/native/webgpu_dawn.lib zip_assets/lib/
 
+      - name: Parse Dawn version
+        shell: pwsh
+        id: parse-version
+        run: |
+          $tag = "${{ vars.DAWN_TAG }}"
+          # Parse tag, e.g., if "v20251026.130842", version = "2025.10.26"
+          if ($tag -match "v(\d{4})(\d{2})(\d{2})\.\d+") {
+            $version = "$($matches[1]).$($matches[2]).$($matches[3])"
+          } else {
+            Write-Error "Unrecognized DAWN_TAG format: $tag"
+            exit 1
+          }
+          echo "version=$version" >> $env:GITHUB_OUTPUT
+
       - uses: ./.github/actions/make-zig-zon
         with:
           name: "dawn"
-          version: ${{ vars.DAWN_TAG }}
+          version: ${{ steps.parse-version.outputs.version }}
           output-path: "dawn-build/dawn/out/zip_assets/build.zig.zon"
 
       - name: Create tar archive
