@@ -99,9 +99,9 @@ jobs:
         shell: pwsh
         run: |
           cd dawn/out/zip_assets
-          Remove-Item -Force -ErrorAction SilentlyContinue dawn-win-msvc.tar.gz
-          tar -czf dawn-win-msvc.tar.gz bin include lib
-          Move-Item -Force dawn-win-msvc.tar.gz ../../../
+          Remove-Item -Force -ErrorAction SilentlyContinue dawn_shared_win_x86_64.tar.gz
+          tar -czf dawn_shared_win_x86_64.tar.gz bin include lib
+          Move-Item -Force dawn_shared_win_x86_64.tar.gz ../../../
 
       - name: Report DLL dependents
         shell: cmd
@@ -114,5 +114,5 @@ jobs:
         with:
           name: dawn-windows-assets
           path: |
-            dawn-build/dawn-win-msvc.tar.gz
+            dawn-build/dawn_shared_win_x86_64.tar.gz
             dawn-build/DAWN_GIT.txt

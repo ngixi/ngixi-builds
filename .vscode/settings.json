@@ -41,7 +41,7 @@
     "-I${workspaceFolder}/build/artifacts/wasmtime/include",
     "-I${workspaceFolder}/build/artifacts/wasmtime/include/wasmtime",
     "-I${workspaceFolder}/build/artifacts/dawn/include",
-    "-I${workspaceFolder}/build/artifacts/dawn/include/dawn",    
+    "-I${workspaceFolder}/build/artifacts/dawn/include/dawn"
   ],
   "logViewer.watch": [
     {
@@ -53,5 +53,21 @@
   "terminal.integrated.env.windows": {
     "WASMTIME_CRANELIFT_FLAGS": "use_sse4_1 use_sse4_2 use_popcnt use_lzcnt use_bmi1 use_bmi2 use_fma use_avx use_avx2 use_avx512f use_avx512dq use_avx512vl enable_pinned_reg opt_level=best",
     "RUST_BACKTRACE": "1"
-  }
+  },
+  "editor.tabSize": 2,
+  "editor.insertSpaces": true,
+  "editor.rulers": [80, 120],
+  "[yaml]": {
+    "editor.tabSize": 2,
+    "editor.insertSpaces": true
+  },
+"indentRainbow.colors": [
+  "rgba(255,255,255,0.04)",
+  "rgba(255,255,255,0.06)",
+  "rgba(255,255,255,0.08)",
+  "rgba(255,255,255,0.10)",
+  "rgba(255,255,255,0.12)",
+  "rgba(255,255,255,0.14)",
+  "rgba(255,255,255,0.16)"
+],
 }

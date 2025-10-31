@@ -1,0 +1,24 @@
+name: Build Dawn - win_x86_64-msvc
+
+on:
+  workflow_dispatch:
+  workflow_call:
+
+jobs:
+  setup:
+    runs-on: LIN-BUILD
+    steps:
+      - name: Checkout ngixi-builds repo
+        uses: actions/checkout@v4
+        with:
+          clean: false
+
+      - uses: ./.github/actions/setup-build
+        with:
+          build-dir: dawn-build
+  build-windows:
+    runs-on: LIN-BUILD
+    needs: setup
+    defaults:
+      run:
+        working-directory: dawn-build

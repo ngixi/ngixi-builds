@@ -35,13 +35,6 @@ jobs:
           ls -la
           find . -name "*.tar.gz"
 
-      - name: Create release structure
-        shell: bash
-        run: |
-          rm -rf dawn-release
-          mkdir -p dawn-release/windows-x64
-          tar -xzf dawn-win-msvc.tar.gz -C dawn-release/windows-x64
-
       - name: Create build.zig.zon
         shell: pwsh
         run: |
@@ -54,26 +47,16 @@ jobs:
             exit 1
           }
           $content = ".{`n    .name = `"dawn`",`n    .version = `"$version`",`n    .paths = .{`"`"},`n}"
-          Set-Content -Path "dawn-release/build.zig.zon" -Value $content -Force
-
-      - name: Create release tar
-        shell: bash
-        run: |
-          TAG="${{ vars.DAWN_TAG }}"
-          cd dawn-release && tar -czf "../dawn-$TAG.tar.gz" *
-
-      - name: Upload release artifact
-        uses: actions/upload-artifact@v4
-        with:
-          name: dawn-release
-          path: dawn-*.tar.gz
+          Set-Content -Path "build.zig.zon" -Value $content -Force
 
       - name: Create GitHub Release
         uses: softprops/action-gh-release@v1
         with:
           tag_name: dawn-${{ vars.DAWN_TAG }}
           name: Dawn ${{ vars.DAWN_TAG }}
-          files: dawn-${{ vars.DAWN_TAG }}.tar.gz
+          files: |
+            dawn_shared_win_x86_64.tar.gz
+            build.zig.zon
           draft: false
           prerelease: false
         env:
