@@ -99,7 +99,7 @@ jobs:
         with:
           name: "dawn"
           version: ${{ vars.DAWN_TAG }}
-          output-path: "dawn/out/zip_assets/build.zig.zon"
+          output-path: "dawn-build/dawn/out/zip_assets/build.zig.zon"
 
       - name: Create tar archive
         shell: pwsh
