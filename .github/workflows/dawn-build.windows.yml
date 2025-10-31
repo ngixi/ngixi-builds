@@ -76,7 +76,7 @@ jobs:
             -DDAWN_USE_WINDOWS_UI=ON ^
             -DDAWN_USE_BUILT_DXC=ON ^
             -DDAWN_BUILD_SAMPLES=ON
-            
+
       - name: Build (monolithic SHARED)
         shell: cmd
         run: |
@@ -95,12 +95,18 @@ jobs:
           Copy-Item -Force gen/include/dawn/webgpu.h zip_assets/include/
           Copy-Item -Force src/dawn/native/webgpu_dawn.lib zip_assets/lib/
 
+      - uses: ./.github/actions/make-zig-zon
+        with:
+          name: "dawn"
+          version: ${{ vars.DAWN_TAG }}
+          output-path: "dawn/out/zip_assets/build.zig.zon"
+
       - name: Create tar archive
         shell: pwsh
         run: |
           cd dawn/out/zip_assets
           Remove-Item -Force -ErrorAction SilentlyContinue dawn_shared_win_x86_64.tar.gz
-          tar -czf dawn_shared_win_x86_64.tar.gz bin include lib
+          tar -czf dawn_shared_win_x86_64.tar.gz bin include lib build.zig.zon
           Move-Item -Force dawn_shared_win_x86_64.tar.gz ../../../
 
       - name: Report DLL dependents

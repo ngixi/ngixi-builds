@@ -1,0 +1,25 @@
+name: 'Make Zig build.zig.zon'
+description: 'Creates a build.zig.zon file with the specified name and version'
+
+inputs:
+  name:
+    description: 'Package name'
+    required: true
+  version:
+    description: 'Package version'
+    required: true
+  output-path:
+    description: 'Output path for build.zig.zon file'
+    required: true
+
+runs:
+  using: 'composite'
+  steps:
+    - name: Create build.zig.zon
+      shell: pwsh
+      run: |
+        $name = "${{ inputs.name }}"
+        $version = "${{ inputs.version }}"
+        $outputPath = "${{ inputs.output-path }}"
+        $content = ".{`n    .name = `"$name`",`n    .version = `"$version`",`n    .paths = .{`"`"},`n}"
+        Set-Content -Path $outputPath -Value $content -Force
