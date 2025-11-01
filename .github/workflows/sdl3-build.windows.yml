@@ -1,4 +1,4 @@
-name: Build SDL - win_x86_64-msvc
+name: Build SDL3 - win_x86_64-msvc
 
 on:
   workflow_dispatch:
@@ -15,19 +15,19 @@ jobs:
 
       - uses: ./.github/actions/setup-build
         with:
-          build-dir: sdl-build
+          build-dir: sdl3-build
 
   build-windows:
     runs-on: WIN-BUILD
     needs: setup
     defaults:
       run:
-        working-directory: sdl-build
+        working-directory: sdl3-build
 
     steps:
       - uses: ilammy/msvc-dev-cmd@v1
 
-      - name: Clone SDL
+      - name: Checkout SDL3
         shell: pwsh
         run: |
           if (-not (Test-Path sdl)) {
@@ -42,46 +42,124 @@ jobs:
           git checkout --quiet ${{ vars.SDL_TAG }}
           git rev-parse --short HEAD | Out-File -Encoding ascii ..\SDL_GIT.txt
 
-      - name: Configure SDL
+      - name: Configure SDL3 (static)
         shell: cmd
         run: |
           cd sdl
-          cmake -S . -B build -G Ninja ^
+          cmake -S . -B build-static -G Ninja ^
             -DCMAKE_BUILD_TYPE=Release ^
             -DCMAKE_C_COMPILER=cl ^
             -DCMAKE_CXX_COMPILER=cl ^
+            -DCMAKE_CXX_FLAGS="/DNOMINMAX /DWIN32_LEAN_AND_MEAN" ^
             -DCMAKE_SYSTEM_VERSION=10.0 ^
             -DCMAKE_MSVC_RUNTIME_LIBRARY=MultiThreaded ^
             -DSDL_SHARED=OFF ^
             -DSDL_STATIC=ON ^
-            -DSDL_TEST_LIBRARY=OFF ^
-            -DSDL_TESTS=OFF
+            -DSDL_TEST_LIBRARY=ON ^
+            -DSDL_TESTS=OFF ^
+            -DSDL_EXAMPLES=OFF
 
-      - name: Build SDL
+      - name: Build SDL3 (static)
         shell: cmd
         run: |
           cd sdl
-          cmake --build build --parallel
+          cmake --build build-static --parallel
 
-      - name: Install SDL
+      - name: Configure SDL3 (shared)
         shell: cmd
         run: |
           cd sdl
-          cmake --install build --prefix install\windows-x64-static
+          cmake -S . -B build-shared -G Ninja ^
+            -DCMAKE_BUILD_TYPE=Release ^
+            -DCMAKE_C_COMPILER=cl ^
+            -DCMAKE_CXX_COMPILER=cl ^
+            -DCMAKE_CXX_FLAGS="/DNOMINMAX /DWIN32_LEAN_AND_MEAN" ^
+            -DCMAKE_SYSTEM_VERSION=10.0 ^
+            -DCMAKE_MSVC_RUNTIME_LIBRARY=MultiThreaded ^
+            -DSDL_SHARED=ON ^
+            -DSDL_STATIC=OFF ^
+            -DSDL_TEST_LIBRARY=ON ^
+            -DSDL_TESTS=OFF ^
+            -DSDL_EXAMPLES=OFF
 
-      - name: Prepare SDL assets
+      - name: Build SDL3 (shared)
+        shell: cmd
+        run: |
+          cd sdl
+          cmake --build build-shared --parallel
+
+      - name: Install SDL3 (static)
+        shell: cmd
+        run: |
+          cd sdl
+          cmake --install build-static --prefix install\windows-x64-static
+
+      - name: Install SDL3 (shared)
+        shell: cmd
+        run: |
+          cd sdl
+          cmake --install build-shared --prefix install\windows-x64-shared
+
+      - name: Copy libraries and headers
         shell: pwsh
         run: |
-          if (Test-Path sdl-assets) {
-            Remove-Item -Recurse -Force sdl-assets
-          }
-          New-Item -ItemType Directory -Path sdl-assets -Force
-          Copy-Item -Recurse -Path sdl/install/windows-x64-static/* -Destination sdl-assets/
+          cd sdl
+          Remove-Item -Recurse -Force -ErrorAction SilentlyContinue zip_assets
+          New-Item -ItemType Directory -Force -Path zip_assets/bin
+          New-Item -ItemType Directory -Force -Path zip_assets/include
+          New-Item -ItemType Directory -Force -Path zip_assets/lib
 
-      - name: Upload SDL artifacts
+          # Copy shared libraries (DLLs)
+          Copy-Item -Force build-shared/*.dll zip_assets/bin/ -ErrorAction SilentlyContinue
+          Copy-Item -Force install/windows-x64-shared/bin/*.dll zip_assets/bin/ -ErrorAction SilentlyContinue
+
+          # Copy static libraries
+          Copy-Item -Force install/windows-x64-static/lib/*.lib zip_assets/lib/ -ErrorAction SilentlyContinue
+
+          # Copy import libraries from shared build
+          Copy-Item -Force install/windows-x64-shared/lib/*.lib zip_assets/lib/ -ErrorAction SilentlyContinue
+
+          # Copy headers
+          Copy-Item -Recurse -Force install/windows-x64-static/include/* zip_assets/include/
+
+      - name: Parse SDL version
+        shell: pwsh
+        id: parse-version
+        run: |
+          $tag = "${{ vars.SDL_TAG }}"
+          # Parse tag, e.g., if "release-3.2.26", version = "3.2.26"
+          if ($tag -match "release-(\d+\.\d+\.\d+)") {
+            $version = $matches[1]
+          } else {
+            Write-Error "Unrecognized SDL_TAG format: $tag"
+            exit 1
+          }
+          echo "version=$version" >> $env:GITHUB_OUTPUT
+
+      - uses: ./.github/actions/make-zig-zon
+        with:
+          name: "sdl3"
+          version: ${{ steps.parse-version.outputs.version }}
+          output-path: "sdl3-build/sdl/zip_assets/build.zig.zon"
+
+      - name: Create tar archive
+        shell: pwsh
+        run: |
+          cd sdl/zip_assets
+          Remove-Item -Force -ErrorAction SilentlyContinue sdl3_win_x86_64.tar.gz
+          tar -czf sdl3_win_x86_64.tar.gz bin include lib build.zig.zon
+          Move-Item -Force sdl3_win_x86_64.tar.gz ../../../
+
+      - name: Report DLL dependents
+        shell: cmd
+        run: |
+          cd sdl\zip_assets\bin
+          if exist SDL3.dll dumpbin /dependents SDL3.dll > "SDL3_DEPENDENTS.txt"
+
+      - name: Upload SDL3 artifacts
         uses: actions/upload-artifact@v4
         with:
-          name: sdl-windows-assets
+          name: sdl3-windows-assets
           path: |
-            sdl-build/sdl-assets/
-            sdl-build/SDL_GIT.txt
+            sdl3-build/sdl3_win_x86_64.tar.gz
+            sdl3-build/SDL_GIT.txt
