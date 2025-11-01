@@ -11,7 +11,7 @@ jobs:
       - name: Checkout ngixi-builds repo
         uses: actions/checkout@v4
         with:
-          clean: false
+          clean: true
 
       - uses: ./.github/actions/setup-build
         with:
@@ -26,17 +26,12 @@ jobs:
 
     steps:
       - name: Setup Rust toolchain
-        uses: actions-rust-lang/setup-rust-toolchain@v1
-        with:
-          toolchain: stable
-          components: rustfmt, clippy
+        uses: dtolnay/rust-toolchain@stable
 
       - name: Checkout Wasmtime
         shell: pwsh
         run: |
-          if (-not (Test-Path wasmtime)) {
-            git clone ${{ vars.WASMTIME_REPO }} wasmtime
-          }
+          git clone ${{ vars.WASMTIME_REPO }} wasmtime
 
       - name: Checkout tag
         shell: pwsh
