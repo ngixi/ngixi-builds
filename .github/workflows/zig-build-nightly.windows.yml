@@ -40,71 +40,16 @@ jobs:
         run: |
           git clone ${{ vars.ZIG_REPO }} zig
 
-      - name: Download LLVM+Clang+LLD dev kit
+      - name: Build Zig
         shell: pwsh
         run: |
-          # Get the LLVM version from Zig's CI script
-          $zigCiScript = Get-Content zig\.github\workflows\ci.yml -Raw
-          if ($zigCiScript -match 'zig\+llvm\+lld\+clang-x86_64-windows-msvc-([^"]+)\.zip') {
-            $llvmVersion = $matches[1]
-            Write-Host "Found LLVM version: $llvmVersion"
-          } else {
-            Write-Error "Could not determine LLVM version from CI script"
-            exit 1
-          }
-
-          $llvmUrl = "https://ziglang.org/deps/zig+llvm+lld+clang-x86_64-windows-msvc-$llvmVersion.zip"
-          $llvmZip = "llvm-clang-lld.zip"
-
-          if (-not (Test-Path "llvm-clang-lld\lib\LLVMCore.lib")) {
-            Write-Host "Downloading LLVM+Clang+LLD from $llvmUrl"
-            Invoke-WebRequest -Uri $llvmUrl -OutFile $llvmZip -UseBasicParsing
-            Write-Host "Extracting LLVM+Clang+LLD..."
-            Expand-Archive -Path $llvmZip -DestinationPath . -Force
-            Remove-Item $llvmZip
-
-            # The extracted folder should be named like zig+llvm+lld+clang-x86_64-windows-msvc-*
-            $extractedDir = Get-ChildItem -Directory | Where-Object { $_.Name -like "zig+llvm+lld+clang-*" } | Select-Object -First 1
-            if ($extractedDir) {
-              Rename-Item $extractedDir.FullName "llvm-clang-lld"
-            }
-          } else {
-            Write-Host "LLVM+Clang+LLD already downloaded"
-          }
-
-      - name: Configure Zig with CMake
-        shell: cmd
-        run: |
           cd zig
-          if not exist build-release mkdir build-release
-          cd build-release
-
-          REM Get absolute path to LLVM
-          set LLVM_PREFIX=%CD%\..\..\llvm-clang-lld
-
-          REM Use forward slashes for CMake paths
-          set LLVM_PREFIX=%LLVM_PREFIX:\=/%
-
-          cmake .. -GNinja ^
-            -DCMAKE_BUILD_TYPE=Release ^
-            -DCMAKE_PREFIX_PATH="%LLVM_PREFIX%" ^
-            -DCMAKE_C_COMPILER=cl ^
-            -DCMAKE_CXX_COMPILER=cl ^
-            -DZIG_STATIC_LLVM=ON ^
-            -DZIG_STATIC_ZSTD=ON ^
-            -DZIG_STATIC_ZLIB=ON ^
-            -DZIG_USE_LLVM_CONFIG=OFF
-
-      - name: Build Zig
-        shell: cmd
-        run: |
-          cd zig\build-release
-          ninja install
+          zig build -Doptimize=ReleaseFast
 
       - name: Verify build
         shell: pwsh
         run: |
-          $zigExe = "zig\build-release\stage3\bin\zig.exe"
+          $zigExe = "zig\zig-out\bin\zig.exe"
           if (Test-Path $zigExe) {
             Write-Host "Build successful - zig.exe exists"
             & $zigExe version
@@ -113,60 +58,4 @@ jobs:
             exit 1
           }
 
-      - name: Package Zig binaries
-        shell: pwsh
-        run: |
-          $outputDir = "zig-windows-x86_64-nightly"
-
-          Write-Host "Creating package: $outputDir"
-
-          # Create output directory structure
-          New-Item -ItemType Directory -Force -Path $outputDir
-
-          # Copy stage3 output
-          Copy-Item -Recurse -Force zig\build-release\stage3\* $outputDir\
-
-          # Create tar.gz archive
-          tar -czf "zig-windows-x86_64-nightly.tar.gz" $outputDir
-
-      - name: Create GitHub release
-        uses: softprops/action-gh-release@v2
-        with:
-          tag_name: zig-nightly-master
-          name: Zig Nightly Build
-          body: |
-            # Zig Compiler Nightly Build
-
-            **Platform:** Windows x86_64 (MSVC)
-
-            This is an automated nightly build of the Zig compiler from the master branch.
-
-            ## Installation
-
-            1. Download `zig-windows-x86_64-nightly.tar.gz`
-            2. Extract the archive
-            3. Add the `bin` directory to your PATH
-            4. Run `zig version` to verify
-
-            ## Notes
-
-            - Built with LLVM 21.x
-            - Statically linked LLVM, zlib, and zstd
-            - Release mode optimizations enabled
-
-            For official releases, visit: https://ziglang.org/download/
-          draft: false
-          prerelease: true
-          files: |
-            zig-nightly-build/zig-windows-x86_64-nightly.tar.gz
-        env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-
-      - name: Upload build artifacts
-        uses: actions/upload-artifact@v4
-        with:
-          name: zig-windows-nightly
-          path: |
-            zig-nightly-build/zig-windows-x86_64-nightly.tar.gz
-          retention-days: 7
 
