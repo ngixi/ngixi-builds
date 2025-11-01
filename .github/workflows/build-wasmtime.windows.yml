@@ -1,0 +1,135 @@
+name: Build Wasmtime - win_x86_64-msvc
+
+on:
+  workflow_dispatch:
+  workflow_call:
+
+jobs:
+  setup:
+    runs-on: WIN-BUILD
+    steps:
+      - name: Checkout ngixi-builds repo
+        uses: actions/checkout@v4
+        with:
+          clean: false
+
+      - uses: ./.github/actions/setup-build
+        with:
+          build-dir: wasmtime-build
+
+  build-windows:
+    runs-on: WIN-BUILD
+    needs: setup
+    defaults:
+      run:
+        working-directory: wasmtime-build
+
+    steps:
+      - name: Setup Rust toolchain
+        uses: actions-rust-lang/setup-rust-toolchain@v1
+        with:
+          toolchain: stable
+          components: rustfmt, clippy
+
+      - name: Checkout Wasmtime
+        shell: pwsh
+        run: |
+          if (-not (Test-Path wasmtime)) {
+            git clone ${{ vars.WASMTIME_REPO }} wasmtime
+          }
+
+      - name: Checkout tag
+        shell: pwsh
+        run: |
+          cd wasmtime
+          git fetch --tags --force --quiet
+          git checkout --quiet ${{ vars.WASMTIME_TAG }}
+          git rev-parse --short HEAD | Out-File -Encoding ascii ..\WASMTIME_GIT.txt
+
+      - name: Initialize git submodules
+        shell: pwsh
+        run: |
+          cd wasmtime
+          git submodule update --init
+
+      - name: Build Wasmtime CLI (release)
+        shell: pwsh
+        run: |
+          cd wasmtime
+          cargo build --release
+
+      - name: Build Wasmtime C API (release)
+        shell: pwsh
+        run: |
+          cd wasmtime
+          cargo build --release -p wasmtime-c-api
+
+      - name: Copy artifacts
+        shell: pwsh
+        run: |
+          cd wasmtime
+          Remove-Item -Recurse -Force -ErrorAction SilentlyContinue zip_assets
+          New-Item -ItemType Directory -Force -Path zip_assets/bin
+          New-Item -ItemType Directory -Force -Path zip_assets/include
+          New-Item -ItemType Directory -Force -Path zip_assets/lib
+
+          # Copy CLI executable
+          Copy-Item -Force target/release/wasmtime.exe zip_assets/bin/
+
+          # Copy C API library
+          if (Test-Path target/release/wasmtime.dll) {
+            Copy-Item -Force target/release/wasmtime.dll zip_assets/bin/
+          }
+          if (Test-Path target/release/wasmtime.lib) {
+            Copy-Item -Force target/release/wasmtime.lib zip_assets/lib/
+          }
+          if (Test-Path target/release/wasmtime.dll.lib) {
+            Copy-Item -Force target/release/wasmtime.dll.lib zip_assets/lib/
+          }
+
+          # Copy C API headers
+          if (Test-Path crates/c-api/include) {
+            Copy-Item -Recurse -Force crates/c-api/include/* zip_assets/include/
+          }
+
+      - name: Parse Wasmtime version
+        shell: pwsh
+        id: parse-version
+        run: |
+          $tag = "${{ vars.WASMTIME_TAG }}"
+          # Parse tag, e.g., if "v38.0.3", version = "38.0.3"
+          if ($tag -match "^v?(.+)$") {
+            $version = $matches[1]
+          } else {
+            Write-Error "Unrecognized WASMTIME_TAG format: $tag"
+            exit 1
+          }
+          echo "version=$version" >> $env:GITHUB_OUTPUT
+
+      - uses: ./.github/actions/make-zig-zon
+        with:
+          name: "wasmtime"
+          version: ${{ steps.parse-version.outputs.version }}
+          output-path: "wasmtime-build/wasmtime/zip_assets/build.zig.zon"
+
+      - name: Create tar archive
+        shell: pwsh
+        run: |
+          cd wasmtime/zip_assets
+          Remove-Item -Force -ErrorAction SilentlyContinue wasmtime_win_x86_64.tar.gz
+          tar -czf wasmtime_win_x86_64.tar.gz bin include lib build.zig.zon
+          Move-Item -Force wasmtime_win_x86_64.tar.gz ../../
+
+      - name: Report DLL dependents
+        shell: cmd
+        run: |
+          cd wasmtime\zip_assets\bin
+          if exist wasmtime.dll dumpbin /dependents wasmtime.dll > "DEPENDENTS.txt"
+
+      - name: Upload Wasmtime artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: wasmtime-windows-assets
+          path: |
+            wasmtime-build/wasmtime_win_x86_64.tar.gz
+            wasmtime-build/WASMTIME_GIT.txt
