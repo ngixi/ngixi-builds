@@ -27,14 +27,21 @@ jobs:
     steps:
       - uses: ilammy/msvc-dev-cmd@v1
 
+      - name: Cache SDL3 build
+        uses: actions/cache@v4
+        id: cache-sdl3
+        with:
+          path: sdl3-build/sdl3_win_x86_64.tar.gz
+          key: sdl3-windows-${{ vars.SDL_TAG }}-${{ runner.os }}
+
       - name: Checkout SDL3
+        if: steps.cache-sdl3.outputs.cache-hit != 'true'
         shell: pwsh
         run: |
-          if (-not (Test-Path sdl)) {
-            git clone ${{ vars.SDL_REPO }} sdl
-          }
+          git clone ${{ vars.SDL_REPO }} sdl
 
       - name: Checkout tag
+        if: steps.cache-sdl3.outputs.cache-hit != 'true'
         shell: pwsh
         run: |
           cd sdl
@@ -43,6 +50,7 @@ jobs:
           git rev-parse --short HEAD | Out-File -Encoding ascii ..\SDL_GIT.txt
 
       - name: Configure SDL3 (static)
+        if: steps.cache-sdl3.outputs.cache-hit != 'true'
         shell: cmd
         run: |
           cd sdl
@@ -60,12 +68,14 @@ jobs:
             -DSDL_EXAMPLES=OFF
 
       - name: Build SDL3 (static)
+        if: steps.cache-sdl3.outputs.cache-hit != 'true'
         shell: cmd
         run: |
           cd sdl
           cmake --build build-static --parallel
 
       - name: Configure SDL3 (shared)
+        if: steps.cache-sdl3.outputs.cache-hit != 'true'
         shell: cmd
         run: |
           cd sdl
@@ -83,24 +93,28 @@ jobs:
             -DSDL_EXAMPLES=OFF
 
       - name: Build SDL3 (shared)
+        if: steps.cache-sdl3.outputs.cache-hit != 'true'
         shell: cmd
         run: |
           cd sdl
           cmake --build build-shared --parallel
 
       - name: Install SDL3 (static)
+        if: steps.cache-sdl3.outputs.cache-hit != 'true'
         shell: cmd
         run: |
           cd sdl
           cmake --install build-static --prefix install\windows-x64-static
 
       - name: Install SDL3 (shared)
+        if: steps.cache-sdl3.outputs.cache-hit != 'true'
         shell: cmd
         run: |
           cd sdl
           cmake --install build-shared --prefix install\windows-x64-shared
 
       - name: Copy libraries and headers
+        if: steps.cache-sdl3.outputs.cache-hit != 'true'
         shell: pwsh
         run: |
           cd sdl
@@ -123,6 +137,7 @@ jobs:
           Copy-Item -Recurse -Force install/windows-x64-static/include/* zip_assets/include/
 
       - name: Parse SDL version
+        if: steps.cache-sdl3.outputs.cache-hit != 'true'
         shell: pwsh
         id: parse-version
         run: |
@@ -137,12 +152,14 @@ jobs:
           echo "version=$version" >> $env:GITHUB_OUTPUT
 
       - uses: ./.github/actions/make-zig-zon
+        if: steps.cache-sdl3.outputs.cache-hit != 'true'
         with:
           name: "sdl3"
           version: ${{ steps.parse-version.outputs.version }}
           output-path: "sdl3-build/sdl/zip_assets/build.zig.zon"
 
       - name: Create tar archive
+        if: steps.cache-sdl3.outputs.cache-hit != 'true'
         shell: pwsh
         run: |
           cd sdl/zip_assets
@@ -151,10 +168,17 @@ jobs:
           Move-Item -Force sdl3_win_x86_64.tar.gz ../../../
 
       - name: Report DLL dependents
+        if: steps.cache-sdl3.outputs.cache-hit != 'true'
         shell: cmd
         run: |
           cd sdl\zip_assets\bin
           if exist SDL3.dll dumpbin /dependents SDL3.dll > "SDL3_DEPENDENTS.txt"
+
+      - name: Create SDL_GIT.txt for cache hit
+        if: steps.cache-sdl3.outputs.cache-hit == 'true'
+        shell: pwsh
+        run: |
+          echo "cached-${{ vars.SDL_TAG }}" | Out-File -Encoding ascii SDL_GIT.txt
 
       - name: Upload SDL3 artifacts
         uses: actions/upload-artifact@v4

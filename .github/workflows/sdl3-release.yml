@@ -3,8 +3,45 @@ name: Release SDL3 Binaries
 on:
   workflow_dispatch:
 
+permissions:
+  contents: write
+
 jobs:
-  placeholder:
-    runs-on: ubuntu-latest
+  build-windows:
+    uses: ./.github/workflows/sdl3-build.windows.yml
+
+  release:
+    runs-on: lin-build
+    needs: build-windows
     steps:
-      - run: echo "Workflow disabled"
+      - name: Checkout ngixi-builds repo
+        uses: actions/checkout@v4
+        with:
+          clean: true
+
+      - uses: ./.github/actions/setup-build
+        with:
+          build-dir: sdl3-build
+
+      - name: Download SDL3 artifacts
+        uses: actions/download-artifact@v4
+        with:
+          name: sdl3-windows-assets
+
+      - name: List downloaded files
+        shell: bash
+        run: |
+          pwd
+          ls -la
+          find . -name "*.tar.gz"
+
+      - name: Create GitHub Release
+        uses: softprops/action-gh-release@v1
+        with:
+          tag_name: sdl3-${{ vars.SDL_TAG }}
+          name: SDL3 ${{ vars.SDL_TAG }}
+          files: sdl3_win_x86_64.tar.gz
+          draft: false
+          prerelease: false
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
