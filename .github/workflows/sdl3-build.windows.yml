@@ -36,17 +36,18 @@ jobs:
 
       - name: Checkout SDL3
         if: steps.cache-sdl3.outputs.cache-hit != 'true'
-        shell: pwsh
-        run: |
-          git clone ${{ vars.SDL_REPO }} sdl
+        uses: actions/checkout@v4
+        with:
+          repository: libsdl-org/SDL
+          ref: ${{ vars.SDL_TAG }}
+          path: sdl3-build/sdl
+          clean: true
 
-      - name: Checkout tag
+      - name: Generate SDL_GIT.txt
         if: steps.cache-sdl3.outputs.cache-hit != 'true'
         shell: pwsh
         run: |
           cd sdl
-          git fetch --tags --force --quiet
-          git checkout --quiet ${{ vars.SDL_TAG }}
           git rev-parse --short HEAD | Out-File -Encoding ascii ..\SDL_GIT.txt
 
       - name: Configure SDL3 (static)
