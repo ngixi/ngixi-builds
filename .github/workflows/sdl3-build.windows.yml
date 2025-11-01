@@ -31,8 +31,15 @@ jobs:
         uses: actions/cache@v4
         id: cache-sdl3
         with:
-          path: sdl3-build/sdl3_win_x86_64.tar.gz
+          path: |
+            sdl3-build/sdl/build-static
+            sdl3-build/sdl/build-shared
+            sdl3-build/sdl/install
+            sdl3-build/sdl3_static_win_x86_64.tar.gz
+            sdl3-build/sdl3_shared_win_x86_64.tar.gz
           key: sdl3-windows-${{ vars.SDL_TAG }}-${{ runner.os }}
+          restore-keys: |
+            sdl3-windows-${{ vars.SDL_TAG }}-
 
       - name: Checkout SDL3
         if: steps.cache-sdl3.outputs.cache-hit != 'true'
@@ -114,29 +121,6 @@ jobs:
           cd sdl
           cmake --install build-shared --prefix install\windows-x64-shared
 
-      - name: Copy libraries and headers
-        if: steps.cache-sdl3.outputs.cache-hit != 'true'
-        shell: pwsh
-        run: |
-          cd sdl
-          Remove-Item -Recurse -Force -ErrorAction SilentlyContinue zip_assets
-          New-Item -ItemType Directory -Force -Path zip_assets/bin
-          New-Item -ItemType Directory -Force -Path zip_assets/include
-          New-Item -ItemType Directory -Force -Path zip_assets/lib
-
-          # Copy shared libraries (DLLs)
-          Copy-Item -Force build-shared/*.dll zip_assets/bin/ -ErrorAction SilentlyContinue
-          Copy-Item -Force install/windows-x64-shared/bin/*.dll zip_assets/bin/ -ErrorAction SilentlyContinue
-
-          # Copy static libraries
-          Copy-Item -Force install/windows-x64-static/lib/*.lib zip_assets/lib/ -ErrorAction SilentlyContinue
-
-          # Copy import libraries from shared build
-          Copy-Item -Force install/windows-x64-shared/lib/*.lib zip_assets/lib/ -ErrorAction SilentlyContinue
-
-          # Copy headers
-          Copy-Item -Recurse -Force install/windows-x64-static/include/* zip_assets/include/
-
       - name: Parse SDL version
         if: steps.cache-sdl3.outputs.cache-hit != 'true'
         shell: pwsh
@@ -152,21 +136,38 @@ jobs:
           }
           echo "version=$version" >> $env:GITHUB_OUTPUT
 
-      - uses: ./.github/actions/make-zig-zon
+      - name: Add build.zig.zon to static install
         if: steps.cache-sdl3.outputs.cache-hit != 'true'
+        uses: ./.github/actions/make-zig-zon
         with:
-          name: "sdl3"
+          name: "sdl3-static"
           version: ${{ steps.parse-version.outputs.version }}
-          output-path: "sdl3-build/sdl/zip_assets/build.zig.zon"
+          output-path: "sdl3-build/sdl/install/windows-x64-static/build.zig.zon"
 
-      - name: Create tar archive
+      - name: Add build.zig.zon to shared install
         if: steps.cache-sdl3.outputs.cache-hit != 'true'
+        uses: ./.github/actions/make-zig-zon
+        with:
+          name: "sdl3-shared"
+          version: ${{ steps.parse-version.outputs.version }}
+          output-path: "sdl3-build/sdl/install/windows-x64-shared/build.zig.zon"
+
+      - name: Create tar archives
         shell: pwsh
         run: |
-          cd sdl/zip_assets
-          Remove-Item -Force -ErrorAction SilentlyContinue sdl3_win_x86_64.tar.gz
-          tar -czf sdl3_win_x86_64.tar.gz bin include lib build.zig.zon
-          Move-Item -Force sdl3_win_x86_64.tar.gz ../../../
+          # Remove existing archives
+          Remove-Item -Force -ErrorAction SilentlyContinue sdl3_static_win_x86_64.tar.gz
+          Remove-Item -Force -ErrorAction SilentlyContinue sdl3_shared_win_x86_64.tar.gz
+
+          # Create static archive
+          cd sdl/install/windows-x64-static
+          tar -czf ../../../sdl3_static_win_x86_64.tar.gz *
+          cd ../../..
+
+          # Create shared archive
+          cd sdl/install/windows-x64-shared
+          tar -czf ../../../sdl3_shared_win_x86_64.tar.gz *
+          cd ../../..
 
       - name: Report DLL dependents
         if: steps.cache-sdl3.outputs.cache-hit != 'true'
@@ -174,6 +175,23 @@ jobs:
         run: |
           cd sdl\zip_assets\bin
           if exist SDL3.dll dumpbin /dependents SDL3.dll > "SDL3_DEPENDENTS.txt"
+
+      - name: Verify archives exist
+        shell: pwsh
+        run: |
+          Write-Host "Checking for SDL3 archives..."
+          if (Test-Path "sdl3_static_win_x86_64.tar.gz") {
+            Write-Host "Static archive found"
+            Get-ChildItem "sdl3_static_win_x86_64.tar.gz"
+          }
+          if (Test-Path "sdl3_shared_win_x86_64.tar.gz") {
+            Write-Host "Shared archive found"
+            Get-ChildItem "sdl3_shared_win_x86_64.tar.gz"
+          }
+          if (-not (Test-Path "sdl3_static_win_x86_64.tar.gz") -and -not (Test-Path "sdl3_shared_win_x86_64.tar.gz")) {
+            Write-Host "No archives found! Looking for any tar.gz files..."
+            Get-ChildItem -Recurse -Filter "*.tar.gz"
+          }
 
       - name: Create SDL_GIT.txt for cache hit
         if: steps.cache-sdl3.outputs.cache-hit == 'true'
@@ -186,5 +204,6 @@ jobs:
         with:
           name: sdl3-windows-assets
           path: |
-            sdl3-build/sdl3_win_x86_64.tar.gz
+            sdl3-build/sdl3_static_win_x86_64.tar.gz
+            sdl3-build/sdl3_shared_win_x86_64.tar.gz
             sdl3-build/SDL_GIT.txt

@@ -40,7 +40,9 @@ jobs:
         with:
           tag_name: sdl3-${{ vars.SDL_TAG }}
           name: SDL3 ${{ vars.SDL_TAG }}
-          files: sdl3_win_x86_64.tar.gz
+          files: |
+            sdl3_static_win_x86_64.tar.gz
+            sdl3_shared_win_x86_64.tar.gz
           draft: false
           prerelease: false
         env:
