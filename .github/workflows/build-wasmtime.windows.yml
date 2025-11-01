@@ -25,9 +25,6 @@ jobs:
         working-directory: wasmtime-build
 
     steps:
-      - name: Setup Rust toolchain
-        uses: dtolnay/rust-toolchain@stable
-
       - name: Checkout Wasmtime
         shell: pwsh
         run: |
