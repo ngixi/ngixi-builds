@@ -173,7 +173,7 @@ jobs:
         if: steps.cache-sdl3.outputs.cache-hit != 'true'
         shell: cmd
         run: |
-          cd sdl\zip_assets\bin
+          cd sdl\install\windows-x64-shared\bin
           if exist SDL3.dll dumpbin /dependents SDL3.dll > "SDL3_DEPENDENTS.txt"
 
       - name: Verify archives exist
