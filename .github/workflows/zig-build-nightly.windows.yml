@@ -44,7 +44,7 @@ jobs:
         shell: pwsh
         run: |
           cd zig
-          zig build -Doptimize=ReleaseFast
+          C:\tools\zig\zig.exe build -Doptimize=ReleaseFast
 
       - name: Verify build
         shell: pwsh
