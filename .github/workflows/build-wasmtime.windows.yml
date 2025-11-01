@@ -10,8 +10,6 @@ jobs:
     steps:
       - name: Checkout ngixi-builds repo
         uses: actions/checkout@v4
-        with:
-          clean: true
 
       - uses: ./.github/actions/setup-build
         with:
@@ -102,7 +100,7 @@ jobs:
         with:
           name: "wasmtime"
           version: ${{ steps.parse-version.outputs.version }}
-          output-path: "wasmtime-build/wasmtime/zip_assets/build.zig.zon"
+          output-path: "wasmtime/zip_assets/build.zig.zon"
 
       - name: Create tar archive
         shell: pwsh

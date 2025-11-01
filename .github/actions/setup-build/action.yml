@@ -22,3 +22,9 @@ runs:
         if (-not (Test-Path ${{ inputs.build-dir }})) {
           New-Item -ItemType Directory -Path ${{ inputs.build-dir }}
         }
+
+    - name: Checkout ngixi-builds into build directory
+      shell: pwsh
+      run: |
+        cd ${{ inputs.build-dir }}
+        git clone ${{ github.server_url }}/${{ github.repository }} .
